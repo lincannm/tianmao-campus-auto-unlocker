@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 小部件说明书 #2：2×1（横条）。尺寸换算与其它三张一致，见 widget_unlock_1x1_info.xml 的注释。 -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_desc_2x1"
+    android:initialLayout="@layout/widget_unlock_bar"
+    android:maxResizeHeight="110dp"
+    android:maxResizeWidth="250dp"
+    android:minHeight="40dp"
+    android:minResizeHeight="40dp"
+    android:minResizeWidth="40dp"
+    android:minWidth="110dp"
+    android:previewLayout="@layout/widget_unlock_bar"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="1"
+    android:targetCellWidth="2"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

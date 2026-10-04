@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  4×2（宽卡）：细描边圆环（I 处置）+ 小锁。圆环外径 77dp ≈ 短边 110dp 的 0.70 倍、
+  线宽在 drawable 里定（1.6dp）；锁 33dp ≈ 0.30 倍。尺寸都按 4×2 的标称
+  250×110dp 定，但只与**短边**有关，所以宽卡窄卡都成立。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_card">
+
+    <!-- 同 widget_unlock_square.xml：RemoteViews 不支持 android.view.View，只能用 ImageView。 -->
+    <ImageView
+        android:id="@+id/widget_ring"
+        android:layout_width="77dp"
+        android:layout_height="77dp"
+        android:layout_gravity="center"
+        android:background="@drawable/widget_ring" />
+
+    <ImageView
+        android:id="@+id/widget_lock"
+        android:layout_width="33dp"
+        android:layout_height="33dp"
+        android:layout_gravity="center"
+        android:contentDescription="@string/widget_lock_desc"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_widget_lock" />
+
+</FrameLayout>

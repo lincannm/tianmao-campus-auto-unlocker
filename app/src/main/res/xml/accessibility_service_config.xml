@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  说明：
+  - canRetrieveWindowContent 必须为 true，否则拿不到控件树（WebView 里的「跳过」也就看不见）。
+  - flagRetrieveInteractiveWindows 让服务能看到当前交互窗口。
+  - 不在这里写 packageNames：包名过滤放在代码里做，便于以后按需放宽。
+  - accessibilityFeedbackType **必须是 feedbackAllMask**（含 SPOKEN / BRAILLE，即"读屏类"）：
+    HyperOS 的「最近任务划掉卡片」= force-stop，而它只跳过看起来像读屏的无障碍服务。
+    证据：work/v3/a11y-keepalive-research.md、复现脚本 work/v3/swipe_kill_test.ps1。
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeWindowsChanged"
+    android:accessibilityFeedbackType="feedbackAllMask"
+    android:accessibilityFlags="flagDefault|flagReportViewIds|flagRetrieveInteractiveWindows"
+    android:canRetrieveWindowContent="true"
+    android:notificationTimeout="100"
+    android:description="@string/service_desc"
+    android:summary="@string/service_desc" />

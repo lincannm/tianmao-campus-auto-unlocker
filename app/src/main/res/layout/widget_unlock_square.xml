@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  2×2：浅红托盘圆（G 处置）+ 小锁。托盘 64dp ≈ 短边 110dp 的 0.58 倍，
+  锁 33dp ≈ 0.30 倍 —— 都按 2×2 的标称尺寸（110×110dp）定，
+  这样缩放后内容不会跟着变形，只是居中的图形看着更空一点。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_card">
+
+    <!--
+      ⚠️ 这里必须是 ImageView，**不能用 <View>**：RemoteViews 只允许一组白名单类
+      （FrameLayout / LinearLayout / ImageView / TextView / …），android.view.View 不在里面，
+      用了它桌面会直接报「载入窗口小部件时出现问题」——3.1 第一版就是这么坏的（用户报的）。
+    -->
+    <ImageView
+        android:id="@+id/widget_badge"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_gravity="center"
+        android:background="@drawable/widget_badge" />
+
+    <ImageView
+        android:id="@+id/widget_lock"
+        android:layout_width="33dp"
+        android:layout_height="33dp"
+        android:layout_gravity="center"
+        android:contentDescription="@string/widget_lock_desc"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_widget_lock" />
+
+</FrameLayout>

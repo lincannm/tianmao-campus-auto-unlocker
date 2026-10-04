@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 由 tools/make_icons.py 生成，不要手改；改设计改脚本再重跑。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#FFF8F6" android:pathData="M 0 0 L 108 0 L 108 108 L 0 108 Z" />
+</vector>

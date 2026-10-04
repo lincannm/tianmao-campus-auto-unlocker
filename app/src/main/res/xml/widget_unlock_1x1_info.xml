@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  小部件说明书 #1：1×1（只有一只锁）。
+  * minWidth/minHeight 用 API 31 以前的老换算：1 格 ≈ 40dp，每多一格 +70dp；
+  * targetCellWidth/Height、previewLayout、description、maxResize* 都是 API 31+ 的属性，
+    低版本忽略即可（本机 HyperOS 是 Android 16，全都吃得到）；
+  * updatePeriodMillis=0：不做周期刷新（省电）。状态类信息这里没有，不需要后台唤醒；
+  * minResize 放到 40×40、maxResize 到 250×110：四张卡都能拉到任意档，
+    拉到哪档由 BaseUnlockWidgetProvider.layoutFor() 换布局。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_desc_1x1"
+    android:initialLayout="@layout/widget_unlock_1x1"
+    android:maxResizeHeight="110dp"
+    android:maxResizeWidth="250dp"
+    android:minHeight="40dp"
+    android:minResizeHeight="40dp"
+    android:minResizeWidth="40dp"
+    android:minWidth="40dp"
+    android:previewLayout="@layout/widget_unlock_1x1"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="1"
+    android:targetCellWidth="1"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

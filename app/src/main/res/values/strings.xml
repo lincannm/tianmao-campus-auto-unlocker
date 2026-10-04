@@ -1,0 +1,130 @@
+<resources>
+    <!--
+      这里是**给系统看的**文案：应用名、无障碍服务名/说明、桌面快捷方式标签、toast。
+      界面文案（向导、设置、对话框）已经全部搬进 Compose 代码里的 stringResource，
+      见 app/src/main/java/.../ui/*.kt；下面凡是只给 Compose 用的条目都留在这，
+      删掉了旧 XML 布局专用的那一批（避免出现两套已经对不上的向导文案）。
+
+      3.0 起应用名从「一键开门」改成「开锁」（用户要求），本文件里所有自称都要跟着改。
+    -->
+    <string name="app_name">开锁</string>
+
+    <!-- 快捷方式 -->
+    <string name="shortcut_settings_short">设置</string>
+    <string name="shortcut_settings_long">打开设置与动作日志</string>
+
+    <!--
+      首次使用的 toaster：**故意只说一句话，不替用户做任何事**。
+      目的是让用户自己知道「设置在哪」——所以文案里必须点名"长按桌面图标"。
+    -->
+    <string name="toast_first_run">初次使用：长按桌面「开锁」图标 → 点「设置」完成向导</string>
+
+    <!-- 向导 -->
+    <string name="wiz_title">初次使用向导</string>
+    <string name="wiz_step_fmt">第 %1$d 步 / 共 %2$d 步</string>
+    <string name="wiz_prev">上一步</string>
+    <string name="wiz_next">下一步</string>
+    <string name="wiz_done">完成</string>
+
+    <string name="wiz_s1_title">开启无障碍</string>
+    <string name="wiz_s1_body">用来自动跳过天猫校园的广告弹窗。\n不开无障碍也能开门，但广告得你自己关。</string>
+    <string name="wiz_s1_on">无障碍已开启</string>
+    <string name="wiz_s1_off">还没开启，广告不会被跳过</string>
+    <string name="wiz_s1_btn">去开启</string>
+    <string name="wiz_s1_hint">在系统列表里找到「开锁」并打开</string>
+
+    <!--
+      向导第 2 步「允许后台运行」的条目：3.2 用户要求删掉那一步（省电策略看起来不会轻易杀掉
+      本App），条目留着是为了真出问题时能原样加回来 —— 现在**界面上没人用**。
+    -->
+    <string name="wiz_s2_title">允许后台运行</string>
+    <string name="wiz_s2_body">系统省电时会杀掉本App。\n被杀了无障碍就失效，广告没法自动跳过。</string>
+    <string name="wiz_s2_on">已允许后台运行</string>
+    <string name="wiz_s2_off">还没允许</string>
+    <string name="wiz_s2_btn">去设置</string>
+
+    <string name="wiz_s3_title">可以用了</string>
+    <string name="wiz_s3_body">以后打开本App，直接进开锁界面。\n要不要顺便替你按「点击开锁」，在设置里选。</string>
+
+    <!--
+      独立提示卡：以后想改设置去哪。
+      原来是夹在正文下面的灰色小字，用户反馈「太不明显」，所以单独做成一张卡（见 WizardScreen）。
+    -->
+    <string name="wiz_hint_title">以后想改设置？</string>
+    <string name="wiz_hint_body">长按桌面上的「开锁」图标，\n再点弹出的「设置」。</string>
+
+    <!-- 无障碍关闭时的提示（不再照旧打开） -->
+    <string name="dlg_a11y_title">无障碍被关闭</string>
+    <string name="dlg_a11y_body">无障碍负责跳过天猫校园的开屏广告。\n\n现在打开天猫校园，开屏广告不会被自动跳过，得你自己跳过。</string>
+    <string name="dlg_a11y_go">去开启</string>
+    <string name="dlg_a11y_anyway">仍打开天猫校园</string>
+
+    <string name="dlg_notmall_title">没装天猫校园</string>
+    <string name="dlg_notmall_body">本工具靠天猫校园的门锁页开门。\n请先装好天猫校园再试。</string>
+    <string name="dlg_ok">知道了</string>
+
+    <!-- 设置面板 -->
+    <string name="set_title">开锁 · 设置</string>
+    <string name="set_a11y_on">无障碍已开启</string>
+    <string name="set_a11y_off">无障碍未开启 · 广告不会被跳过</string>
+    <string name="set_a11y_no_bind">设置里开着，但服务还没连上（等一会儿，或重开一次本App）</string>
+    <!--
+      「会话」这个词用户反馈不好理解，3.0 起界面上不再出现它，
+      一律说「自动跳过弹窗」这件事本身（代码里 Session 这个名字保留，见 Session.kt）。
+    -->
+    <string name="set_auto_active">自动跳过弹窗中，还剩 %1$d 秒</string>
+    <string name="set_auto_none">自动跳过已结束（每次打开后 90 秒内有效）</string>
+    <string name="set_click_count">累计点掉弹窗：%1$d 个</string>
+    <string name="set_btn_about">了解本App</string>
+    <string name="set_btn_open">立即打开开锁界面</string>
+    <string name="set_btn_stop">停止自动跳过</string>
+    <string name="set_btn_a11y">无障碍设置</string>
+    <string name="set_btn_wizard">重进初次使用向导</string>
+    <string name="log_title">日志</string>
+    <string name="log_empty">（暂无日志）</string>
+
+    <!-- 独立整页顶栏返回按钮的无障碍描述（图标本身没文字，读屏靠这条）。 -->
+    <string name="nav_back">返回</string>
+
+    <!--
+      「了解本App」整页（3.3 起是独立 Activity，不再是弹窗）。
+      文案由用户定稿，页面顺序也由用户指定：三张插图 → 版本号 → 开源代码卡 → 正文卡
+      →「怎么用」→「如何进入设置界面」→「Vibed by」。
+      3.3 第二版按用户反馈改：卡标题「项目主页」→「开源代码」、去掉那行小字说明、
+      「已在 GitHub 开源：」→「点击访问 GitHub 项目」（让用户看得出这张卡能点）、
+      「它怎么做到的」**只去掉标题**（正文 `about_what_body` 留着）。
+    -->
+    <string name="about_title">关于「开锁」</string>
+    <string name="about_repo_title">开源代码</string>
+    <string name="about_repo_path">lincannm/tianmao-campus-auto-unlocker</string>
+    <string name="about_repo_open">点击访问 GitHub 项目</string>
+    <string name="about_repo_failed">打不开浏览器 · 链接：lincannm/tianmao-campus-auto-unlocker</string>
+    <string name="about_version">版本 %1$s（versionCode %2$d）</string>
+    <!-- 这张卡**没有标题**（用户 3.3：只不要「它怎么做到的」这个标题，正文要留着）。 -->
+    <string name="about_what_body">本 App 利用无障碍权限，实现自动化跳过广告和更新弹窗，从桌面一路跳转到天猫校园的开锁界面，且可以自动点击开锁。</string>
+    <string name="about_how_title">怎么用</string>
+    <string name="about_how_body">两种方式：\n\n· 自动开锁：点桌面上的本App图标/小部件 → 直达门锁页，并替你按一次「点击开锁」。\n· 仅提前打开：打开本App → 只送到门锁页，不代按开锁按钮。\n\n两种方式都能在设置里分别开关。</string>
+    <string name="about_where_title">如何进入设置界面</string>
+    <string name="about_where_body">长按桌面上的「开锁」图标 → 点「设置」。</string>
+    <string name="about_vibed">Vibed by: DeepSeek V4.1 Flash</string>
+
+    <!-- 代按开锁的两个开关（3.1）。界面上「打开 App」在前、「小部件」在后（3.2 换序）。 -->
+    <string name="set_unlock_app">打开 App 时自动点开锁</string>
+    <string name="set_unlock_app_desc">开了以后，从桌面图标进来会替你按一次「点击开锁」。</string>
+    <string name="set_unlock_widget">点小部件后自动点开锁</string>
+    <string name="set_unlock_widget_desc">小部件直达门锁页，并替你按一次「点击开锁」。</string>
+
+    <!-- 桌面小部件（四张独立卡，放置后可自由缩放） -->
+    <string name="widget_name_1x1">开锁 · 1×1</string>
+    <string name="widget_name_2x1">开锁 · 2×1</string>
+    <string name="widget_name_2x2">开锁 · 2×2</string>
+    <string name="widget_name_4x2">开锁 · 4×2</string>
+    <string name="widget_desc_1x1">一只锁。点一下直达天猫校园门锁页。</string>
+    <string name="widget_desc_2x1">横条。点一下直达天猫校园门锁页。</string>
+    <string name="widget_desc_2x2">托盘圆 + 锁。点一下直达天猫校园门锁页。</string>
+    <string name="widget_desc_4x2">大卡。点一下直达天猫校园门锁页。</string>
+    <string name="widget_lock_desc">开锁</string>
+
+    <string name="service_label">开锁 · 绕过广告/弹窗</string>
+    <string name="service_desc">在「开锁」自动跳过弹窗的这段时间里，跳过天猫校园的开屏广告、广告弹窗与更新提示。</string>
+</resources>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  1×1 小部件：只有一只双色锁（用户定的「纯图标」方案，分配到的处置是 J 裸锁）。
+  卡面颜色由 @color/widget_card 决定，深色主题自动切到 values-night 里那份。
+  锁图 @drawable/ic_widget_lock 由 tools/make_icons.py 生成（透明底 PNG，
+  锁的最长边铺满方形画布，所以这里是 18dp 的方框 + fitCenter，
+  锁高就是卡片短边 40dp 的 0.45 倍）。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_card_1x1">
+
+    <ImageView
+        android:id="@+id/widget_lock"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:layout_gravity="center"
+        android:contentDescription="@string/widget_lock_desc"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_widget_lock" />
+
+</FrameLayout>

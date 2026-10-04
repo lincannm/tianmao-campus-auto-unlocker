@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  1×1 专用的卡面：整卡只有 40dp，24dp 圆角会被系统截成半圆（看起来像圆形图标）。
+  这里收到 14dp（≈ 短边的 0.34 倍），就是 MIUI / HyperOS 上 1×1 惯用的「方圆角」。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/widget_card" />
+    <corners android:radius="14dp" />
+</shape>

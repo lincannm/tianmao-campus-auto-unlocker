@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ⚠️ **只在 debug 包生效**（`src/debug/AndroidManifest.xml` 这个源集本身就只有 debug 用；
+  下面再用 `tools:node="remove"` 把别名从最终包里彻底删掉，只有需要时才把 remove 注释掉）。
+
+  背景：本机 `adb shell input tap` 不稳定（同一坐标有时点得中、有时点不中；MIUIInput 日志显示
+  事件确实投递到了 App 窗口，但 Compose 的点击不触发），而 `AboutActivity` 在正式清单里是
+  `exported=false`、adb 起不来。为了**把页面本身看清楚**（三张插图、版本号、开源代码卡、
+  Vibed by 卡），这里给同一个 Activity 挂一个 exported 的别名，用
+  `adb shell am start -n com.fucktmall.unlockassistant/.DebugAbout` 直接打开。
+
+  **要临时启用**：把下面 `tools:node="remove"` 那行删掉再出包；**验完必须还原**
+  （否则 debug 包里会多一个任何应用都能拉起 AboutActivity 的入口）。
+  它读的是同一个 `AboutActivity` 类，所以"页面渲染成什么样"的结论仍然成立；
+  但"点按钮能不能跳过去"必须另外验证（那次成功的点击在验收矩阵里记了命令与时间）。
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <activity-alias
+            android:name=".DebugAbout"
+            android:targetActivity=".AboutActivity"
+            android:exported="true"
+            tools:ignore="MissingClass"
+            tools:node="remove" />
+    </application>
+
+</manifest>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  小部件的颜色（深色主题）。卡面换成暗色后，锁用的是
+  drawable-night-*/ic_widget_lock.png 那一支（锁体 #FFB4AB / 锁梁 #FFDAD6），
+  所以这里的光环也要跟着换成浅色，否则深红压在暗底上看不见。
+-->
+<resources>
+    <color name="widget_card">#2A2322</color>
+    <color name="widget_badge">#4A2A28</color>
+    <color name="widget_ring">#FFDAD6</color>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  2×1（横条，缩放到 3×1 / 4×1 也用它）：卡面 + 居中的双色锁。
+  锁 18dp = 短边 40dp 的 0.45 倍，和 1×1 保持一致的比例。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_card">
+
+    <ImageView
+        android:id="@+id/widget_lock"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:layout_gravity="center"
+        android:contentDescription="@string/widget_lock_desc"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_widget_lock" />
+
+</FrameLayout>

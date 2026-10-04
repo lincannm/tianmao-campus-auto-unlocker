@@ -1,0 +1,15 @@
+<resources>
+    <!--
+      UI 已经全部由 Compose 画，这里的 XML 主题只负责窗口本身：
+        - 窗口底色用 Compose 侧红色主题的 surface（浅色 #FFF8F6 / 深色 #1A1110），
+          免得 Compose 首帧之前闪一下别的颜色；
+        - 状态栏图标：浅色底要深色图标。
+      不继承 Theme.Material3.* 的原因：那是 View 体系的 Material Components 库（com.google.android.material），
+      本项目只引 Compose 版 material3，没有那个 XML 主题可继承。
+      （3.0 主题色改成红色后同步了这里的底色；色值见 ui/Theme.kt。）
+    -->
+    <style name="Theme.UnlockAssistant" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#FFFFF8F6</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

@@ -1,0 +1,7 @@
+<resources>
+    <!-- 深色模式的窗口底色 = Compose 侧红色主题的 dark surface（#1A1110），状态栏图标转浅色。 -->
+    <style name="Theme.UnlockAssistant" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#FF1A1110</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

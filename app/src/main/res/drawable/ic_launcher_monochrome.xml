@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 由 tools/make_icons.py 生成，不要手改；改设计改脚本再重跑。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:translateX="28.997" android:translateY="28.994" android:scaleX="0.049" android:scaleY="0.049">
+        <path android:fillColor="#000000" android:fillType="evenOdd" android:pathData="M 296.07 420.52 L 727.93 420.52 A 101.51 101.51 0 0 1 829.44 522.03 L 829.44 820.09 A 101.51 101.51 0 0 1 727.93 921.6 L 296.07 921.6 A 101.51 101.51 0 0 1 194.56 820.09 L 194.56 522.03 A 101.51 101.51 0 0 1 296.07 420.52 Z M 426.67 671.06 A 85.33 85.33 0 1 1 597.33 671.06 A 85.33 85.33 0 1 1 426.67 671.06 Z" />
+        <path android:fillColor="#000000" android:pathData="M 362.15 430 L 362.15 322.56 A 150.19 150.19 0 0 1 657.412 283.688 L 724.902 265.604 A 220.06 220.06 0 0 0 292.28 322.56 L 292.28 430 Z" />
+    </group>
+</vector>
