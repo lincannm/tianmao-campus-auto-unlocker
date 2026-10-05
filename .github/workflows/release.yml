@@ -17,6 +17,11 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # 给 gh 用：Actions 里 GITHUB_TOKEN 不会自动变成 GH_TOKEN，gh 只认后者，必须显式给。
+    # GH_REPO 也一起钉住，免得 gh 依赖当前工作目录去猜仓库。
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
     steps:
       - name: 取出源码
         uses: actions/checkout@v4
