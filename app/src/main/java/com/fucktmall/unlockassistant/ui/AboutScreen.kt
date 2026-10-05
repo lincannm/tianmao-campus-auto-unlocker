@@ -74,6 +74,7 @@ import com.fucktmall.unlockassistant.R
  *  - `il_about_mascot.webp` + `il_about_mascot_still.png`（**`res/raw/`** —— 放 `assets/` 会
  *    在运行时 FileNotFoundException，工程里没有 assets 源集，第一版就是这么翻车的）；
  *  - `ic_github.xml`（pathData 逐字取自用户给的 `github (1).svg`，手抄的那版图形是乱的）、
+ *    `ic_stars.xml`（取自用户给的 `stars.svg`，「Vibed by」卡的星芒图标）、
  *    `ic_arrow_back.xml`（Material 官方）。
  *
  * 动画 WebP 的兼容策略：`BitmapFactory.decodeStream` 在 API 28+ 返回 `AnimatedImageDrawable`
@@ -201,15 +202,16 @@ fun AboutScreen(onBack: () -> Unit) {
 
 /**
  * 「Vibed by」卡：浅色底（同正文卡的 `surfaceContainerLow`）+ 图标在左边 + 一行字。
- * 用户 3.3 指定：**位置在「开源代码」卡正下方**（不是页尾），图标用他给的 `icon-idea.svg`
- * （由 `tools/export_about_images.py` 原样搬运成 `ic_idea.xml`）。
+ * 用户 3.3 指定：**位置在「开源代码」卡正下方**（不是页尾）。
+ * 图标 3.4 起换成用户给的 `stars.svg`（星芒）—— 之前那张是 `icon-idea.svg`（灯泡），
+ * 同样是 `tools/export_about_images.py` 原样搬运成 `ic_stars.xml`。
  */
 @Composable
 private fun VibedCard() {
     StepCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Image(
-                painter = painterResource(R.drawable.ic_idea),
+                painter = painterResource(R.drawable.ic_stars),
                 contentDescription = null,
                 modifier = Modifier.size(26.dp),
                 colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurfaceVariant)

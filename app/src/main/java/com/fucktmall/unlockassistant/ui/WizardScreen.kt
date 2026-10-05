@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -18,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.fucktmall.unlockassistant.AppState
 import com.fucktmall.unlockassistant.MainActivity
 import com.fucktmall.unlockassistant.R
@@ -36,6 +39,25 @@ import com.fucktmall.unlockassistant.Session
  *    电池白名单放行了，「去设置」同理）——靠 [PrimaryButton] 的 enabled 实现；
  *  - 「以后想改设置」从正文下面的灰色小字，变成一张**独立的主题色卡片** [NoticeCard]。
  *
+ * ## ⭐ 3.4：无障碍没拿到就**走不完向导**（用户要求）
+ *
+ * 用户实测反馈：第一次进向导、无障碍根本没开，却能一路点「下一步」到「完成」。
+ * 这是错的 —— 向导第 1 步存在的唯一目的就是让用户把无障碍打开，
+ * 允许空着手走到最后，等于向导白走一遍，而且 App 之后还会因为无障碍没开而拦下跳转
+ * （见 [MainActivity.tryFireUnlock] 返回 `A11Y_OFF` 那条路径），用户会以为"向导走完了却不能用"。
+ *
+ * 做法：**「下一步」/「完成」的 `enabled` 绑定 [a11yOn]**，没开就点不动；
+ * 同时在按钮上方用 error 色说明为什么点不动（[R.string.wiz_need_a11y]）。
+ * 不另加"跳过"入口 —— 那正好是用户要去掉的行为。想退出向导只能用系统返回键。
+ *
+ * ## 3.4：无障碍那一步**自带开启教程**（用户要求「附上教程」）
+ *
+ * 用 [StepsCard] 画成带序号的清单，文案见 `strings.xml` 的 `wiz_s1_tut_*`。
+ * **必须是跨品牌的通用说法**（用户：『用户不一定是小米手机』）：系统的无障碍页可能叫
+ * 「无障碍」也可能叫「辅助功能」，服务列表可能叫「已下载的应用」也可能叫「已安装的服务」——
+ * 两个名字都写出来，别把本机（HyperOS）那套路径当成所有人的路径。
+ * 差异说明也**并进各步骤正文**，卡底下不再挂灰色小字（用户要求）。
+ *
  * ## 它是怎么被打开的（3.0 改了）
  *
  * **不再**由桌面图标直接打开 —— 首次打开本App 只弹一句 toast（见 [MainActivity]），
@@ -50,6 +72,10 @@ fun WizardScreen(
     onFinish: () -> Unit
 ) {
     var step by remember { mutableIntStateOf(0) }
+
+    // 最后一步的下标。3.4 起「能不能往下走」= 无障碍开没开（见类注释）。
+    val lastStep = 1
+    val canAdvance = a11yOn
 
     Screen {
         ScreenHeader(
@@ -72,14 +98,43 @@ fun WizardScreen(
                 }
             }
 
+            // 教程卡只在无障碍那一步出现：用户点完「去开启」就离开本App 了，
+            // 回来时靠的就是这张卡记着刚才该点哪里。
+            if (step == 0) {
+                Spacer(Modifier.height(12.dp))
+                StepsCard(
+                    title = stringResource(R.string.wiz_s1_tut_title),
+                    steps = listOf(
+                        stringResource(R.string.wiz_s1_tut_1),
+                        stringResource(R.string.wiz_s1_tut_2),
+                        stringResource(R.string.wiz_s1_tut_3),
+                        stringResource(R.string.wiz_s1_tut_4),
+                        stringResource(R.string.wiz_s1_tut_5)
+                    )
+                )
+            }
+
             // 「以后想改设置」单独一张卡，只在最后一步出现（那一步才在讲以后怎么用）。
-            if (step == 1) {
+            if (step == lastStep) {
                 Spacer(Modifier.height(12.dp))
                 NoticeCard(
                     title = stringResource(R.string.wiz_hint_title),
                     body = stringResource(R.string.wiz_hint_body)
                 )
             }
+        }
+
+        // 按钮为什么是灰的 —— 3.4 起必须写出来，否则用户只会觉得"卡住了"。
+        if (!canAdvance) {
+            Text(
+                text = stringResource(R.string.wiz_need_a11y),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, bottom = 8.dp),
+                fontSize = 13.sp,
+                lineHeight = 20.sp,
+                color = MaterialTheme.colorScheme.error
+            )
         }
 
         Row(
@@ -95,9 +150,15 @@ fun WizardScreen(
             ) { if (step > 0) step-- }
 
             PrimaryButton(
-                text = if (step < 1) stringResource(R.string.wiz_next) else stringResource(R.string.wiz_done),
-                modifier = Modifier.weight(1f)
-            ) { if (step < 1) step++ else onFinish() }
+                text = if (step < lastStep) {
+                    stringResource(R.string.wiz_next)
+                } else {
+                    stringResource(R.string.wiz_done)
+                },
+                modifier = Modifier.weight(1f),
+                // ⭐ 没拿到无障碍就点不动（3.4 用户要求，见类注释）。
+                enabled = canAdvance
+            ) { if (step < lastStep) step++ else onFinish() }
         }
     }
 }
@@ -124,6 +185,12 @@ fun WizardHost(resumeTick: Int, onFinish: () -> Unit) {
     )
 }
 
+/**
+ * 第 1 步：开启无障碍。
+ *
+ * 卡里只放「是什么 / 现在什么状态 / 按钮」这三件事，**具体怎么点放卡外的 [StepsCard]** ——
+ * 用户点完按钮就跳去系统设置了，教程卡留在屏幕上（回来时还在），卡里塞满步骤反而没人读。
+ */
 @Composable
 private fun StepA11y(a11yOn: Boolean, onOpenA11y: () -> Unit) {
     StepTitle(stringResource(R.string.wiz_s1_title))
@@ -142,8 +209,6 @@ private fun StepA11y(a11yOn: Boolean, onOpenA11y: () -> Unit) {
         enabled = !a11yOn,
         onClick = onOpenA11y
     )
-    Spacer(Modifier.height(10.dp))
-    HintText(stringResource(R.string.wiz_s1_hint))
 }
 
 @Composable

@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -196,6 +198,77 @@ fun NoticeCard(title: String, body: String, modifier: Modifier = Modifier) {
                 lineHeight = 23.sp,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
+        }
+    }
+}
+
+/**
+ * 编号步骤卡（3.4 新增）：教用户「在系统设置里怎么点」。
+ *
+ * 为什么要它：向导第 1 步是「开启无障碍」，而那一页**不在本App 里** ——
+ * 用户点完「去开启」就跳进系统设置，回来时全靠记忆。原来的做法是正文下面一行灰色小字
+ * （「在系统列表里找到「开锁」并打开」），实测不够：那一页可能叫「无障碍」也可能叫「辅助功能」，
+ * 服务列表还藏在「已下载的应用 / 已安装的服务」里，只给一句话等于让人自己找。
+ * 所以改成**带序号圆点的分步清单**（与 [NoticeCard] 同色系，但一眼看得出是"照做"的清单）。
+ *
+ * ⚠️ 两条来自用户的约束（3.4）：
+ *  ① **正文用跨品牌的通用说法**（「用户不一定是小米手机」）—— 别在步骤里写小米专属的路径；
+ *  ② 不要在这张卡底下再挂一行灰色小字，**差异说明要并进各步骤正文**
+ *     （所以这里没有 `note` 参数了）。
+ * 步骤文字用 16sp/26sp，与 [BodyText] 同档 —— 它是正文，不是注释。
+ *
+ * 序号圆点用 `onPrimaryContainer` 实心底 + `primaryContainer` 字色 —— 就是在主题色上挖空，
+ * 不需要额外的语义色（本主题里可用色不多，见 [StatusChip] 的说明）。
+ */
+@Composable
+fun StepsCard(
+    title: String,
+    steps: List<String>,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.primaryContainer
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = title,
+                fontSize = 17.sp,
+                lineHeight = 24.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Spacer(Modifier.height(12.dp))
+            steps.forEachIndexed { i, step ->
+                if (i > 0) Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.Top) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${i + 1}",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = step,
+                        modifier = Modifier.weight(1f),
+                        fontSize = 16.sp,
+                        lineHeight = 26.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
         }
     }
 }
