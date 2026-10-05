@@ -42,6 +42,36 @@
 2. 长按桌面上的「开锁」图标，点弹出的「设置」，在向导里打开系统无障碍服务；
 3. 之后从桌面图标或小部件打开，就会直接进到门锁页；面板里的两个开关决定要不要顺便替你按开锁。
 
+## 出 Release（手动触发，push 不会自动构建）
+
+仓库里配了 GitHub Actions（`.github/workflows/release.yml`），它的触发器**只有 `workflow_dispatch`**：
+**任何 push 都不会构建、也不会发布**，出包完全由你决定。发一次版的流程：
+
+1. 改 `app/build.gradle.kts` 里的 `versionName`（要一起改就再提 `versionCode`），提交并 push；
+2. 到仓库的 **Actions → Release APK → Run workflow**（或用 `gh workflow run release.yml`）；
+3. 几十秒到几分钟后，**Draft Release** 里会多一条 `v<versionName>`（例如 `v3.2`），
+   附件是 release 签名的 APK；**确认没问题再手动点 Publish**。
+
+规则与环境（都是脚本里写死的，出问题先看这几条）：
+
+- **tag 不手填**，由代码里的 `versionName` 推出来（`v3.2`），保证「Release 名字」和「APK 里印的版本」一致；
+  **同名 tag 已存在就直接失败**，不会悄悄覆盖已发布的包 —— 这时提一下 `versionName` 再触发；
+- **APK 版本以 `app/build.gradle.kts` 为准**，workflow 不覆盖它；产物名是
+  `UnlockAssistant-<versionName>-release.apk`；
+- 签名用仓库里那把自签名密钥（`keystore/unlockassistant.jks`），和本地构建**同一把**，
+  v1 + v2 + v3 全开 —— 可以直接覆盖安装已装的版本，不必卸载；
+- 构建环境按仓库现状还原：**JDK 25**（守护进程 JDK 被 `gradle/gradle-daemon-jvm.properties` 钉在 25）、
+  `platforms;android-37.0` + `build-tools`（`compileSdk 37` 要这一档）；
+- 脚本跑完会打印 `apksigner verify --min-sdk-version 21` 的结果与 APK 的 SHA256，便于对账。
+
+本地出包仍然是 `gradlew assembleRelease`（工作区里的包装脚本 `tools\build_app.ps1 -Task assembleRelease`），
+两边的产物都是 release 签名，**口径一致**。
+
+> Release workflow（English summary）：`.github/workflows/release.yml` runs **only** on manual
+> `workflow_dispatch` — pushes never build or publish. Bump `versionName` in `app/build.gradle.kts`,
+> push, then run the workflow; it builds a release-signed APK and creates a **draft** GitHub Release
+> tagged `v<versionName>` for you to review and publish.
+
 ## 技术要点
 
 - Kotlin + Jetpack Compose + Material Design 3，界面与配色由 Compose 主题统一；

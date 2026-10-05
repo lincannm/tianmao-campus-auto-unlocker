@@ -1,0 +1,5 @@
+# GitHub 只在 LF 下解析这些文件；本机 Git 若开了 core.autocrlf=true，
+# 提交时会被转成 CRLF（git 会给出 "LF will be replaced by CRLF" 警告）。钉死成 LF。
+.github/workflows/*.yml text eol=lf
+.github/workflows/*.yaml text eol=lf
+gradlew text eol=lf
