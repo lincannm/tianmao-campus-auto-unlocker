@@ -12,7 +12,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 
 /**
- * 弹窗清理服务（3.1 起多一件事：在授权下代按一次开锁）。
+ * 弹窗清理服务，外加在授权下代按一次开锁。
  *
  * 职责边界（刻意收窄）：
  *  1. 只在「自动跳过弹窗」的时间窗（90 秒，见 [Session]）内动作，窗一过就完全静默；
@@ -20,13 +20,10 @@ import android.view.accessibility.AccessibilityNodeInfo
  *  3. 天猫校园里只点「跳过 / 关闭 / 暂不」类控件；
  *     MIUI 的「启动应用」唤醒确认框**单独一套规则**，且必须先验明弹窗身份才点「允许」。
  *
- * ## 代按开锁（3.1，用户要求）
- *
- * 只有这次跳转**开着**对应开关才置位授权标志（设置里两个开关：打开 App 时默认关、
- * 点小部件后默认开，见 [AppState] / [MainActivity.tryFireUnlock]）。授权被
- * [Session.consumeUnlockArm] 原子取走，所以**一次跳转最多按一下**；
- * 没授权时这里一个字都不会点。命中判定用精确文本「点击开锁」，点击走
- * [clickSelfOrAncestor]，**绝不按坐标盲点**。
+ * 代按开锁：只有这次跳转**开着**对应入口开关才置位授权标志
+ * （见 [AppState] / [MainActivity.tryFireUnlock]）。授权被 [Session.consumeUnlockArm]
+ * 原子取走，所以**一次跳转最多按一下**；没授权时这里一个字都不会点。命中判定用精确文本
+ * 「点击开锁」，点击走 [clickSelfOrAncestor]，**绝不按坐标盲点**。
  */
 class UnlockAccessibilityService : AccessibilityService() {
 
@@ -38,9 +35,8 @@ class UnlockAccessibilityService : AccessibilityService() {
         private const val MAX_CLIMB = 6
 
         /**
-         * 开锁控件的轮询：门锁页是 H5，WebView 的虚拟节点树**不是一开始就在**无障碍树里
-         * （实测：页面已渲染完，第一次 dump 整个 WebView 没有任何子节点；约 40 秒后第二次
-         * dump 才出现 69 个节点，其中才有「点击开锁」）。所以授权期内主动轮询，最多 10 秒。
+         * 开锁控件的轮询：门锁页是 H5，WebView 的虚拟节点树不是一开始就在无障碍树里
+         * （页面渲染完的第一时间整个 WebView 可能没有任何子节点）。所以授权期内主动轮询。
          */
         private const val UNLOCK_POLL_MS = 10_000L
         private const val UNLOCK_POLL_INTERVAL_MS = 400L
@@ -52,13 +48,8 @@ class UnlockAccessibilityService : AccessibilityService() {
         const val MIUI_SECURITY_PKG = "com.miui.securitycenter"
 
         /**
-         * 走通用「跳过 / 关闭 / 暂不」规则的包。
-         *
-         * 3.0 起**只有天猫校园**：以前还包含我们自己的包，那是为了点掉 App 内置的
-         * 「自检：假广告」弹窗（验证「事件 → 遍历 → 命中规则 → 点击」整条链路）。
-         * 用户要求去掉那个自检按钮，所以连这条白名单一起撤掉 —— 服务现在没有理由
-         * 去点本App 自己的界面（最小权限）。
-         * 代价：规则链路只能靠天猫校园真投广告时验证（见 docs/10-deliverable-and-device.md §2 的验收矩阵）。
+         * 走通用「跳过 / 关闭 / 暂不」规则的包：**只有天猫校园**。
+         * 服务没有理由去点本 App 自己的界面（最小权限）。
          */
         private val GENERIC_PACKAGES = setOf(TMALL_PKG)
 
@@ -85,11 +76,10 @@ class UnlockAccessibilityService : AccessibilityService() {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
                     AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
                     AccessibilityEvent.TYPE_WINDOWS_CHANGED
-            // 声明成「读屏类」服务（含 SPOKEN / BRAILLE 等全部反馈类型），**这不是随手写的**：
-            // HyperOS 的「最近任务划掉卡片」= force-stop，而它只跳过看起来像读屏的无障碍服务。
-            // 实测（同一手势、同一台机器，见 work/v3/swipe_kill_test.ps1）：
-            //   feedbackGeneric  → 3/3 被 `ProcessSceneCleaner: SwipeUpClean: force-stop` 强停，授权被清；
-            //   feedbackAllMask  → 3/3 未被强停，pid 与授权都保住（GKD 也是这么声明的，它同样不被杀）。
+            // 必须声明成「读屏类」服务（含 SPOKEN / BRAILLE 等全部反馈类型）：
+            // HyperOS 的「最近任务划掉卡片」等于 force-stop，而它只跳过看起来像读屏的无障碍服务。
+            // 声明成别的反馈类型 → 划掉卡片时被 `ProcessSceneCleaner: SwipeUpClean: force-stop`
+            // 强停，`accessibility_enabled` 与授权一起被系统清掉，只能让用户手动重开。
             feedbackType = AccessibilityServiceInfo.FEEDBACK_ALL_MASK
             flags = flags or
                     AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
@@ -154,7 +144,7 @@ class UnlockAccessibilityService : AccessibilityService() {
     }
 
     // ------------------------------------------------------------------
-    // 代按开锁（3.1）
+    // 代按开锁
     // ------------------------------------------------------------------
 
     /**
@@ -264,8 +254,7 @@ class UnlockAccessibilityService : AccessibilityService() {
                 }
             }
         }
-        // 没授权时也把「看到开锁控件」记一笔：插线验证时靠它确认识别对不对
-        // （这一步只读不点，见 docs/20-core-mechanisms-and-invariants.md §9）。
+        // 没授权时也把「看到开锁控件」记一笔，用来确认识别对不对（这一步只读不点）。
         if (sawUnlock && !Session.isUnlockArmed(this)) {
             val key = "UNLOCK_SEEN"
             val last = lastClickAt[key] ?: 0L
@@ -281,7 +270,6 @@ class UnlockAccessibilityService : AccessibilityService() {
 
     /**
      * MIUI「启动应用」唤醒确认框。
-     *
      * 必须先验明身份（窗口里出现「启动应用」或「想要打开」）才点「允许」，
      * 否则普通权限弹窗会被误点。命中后优先点「始终允许」——一次授权以后不再问。
      */
@@ -320,7 +308,7 @@ class UnlockAccessibilityService : AccessibilityService() {
 
         for (node in ordered) {
             // 冷却键**刻意共用一个常量**：这个弹窗上「始终允许」和「本次允许」同时存在，
-            // 若按按钮文案分别计时，一次事件里会把两个都点掉（实测发生过）。
+            // 若按按钮文案分别计时，一次事件里会把两个都点掉。
             // 共用一个键 = 同一秒内只点一次。
             val key = "MIUI_START_CONFIRM"
             val last = lastClickAt[key] ?: 0L

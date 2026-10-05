@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  2×2：浅红托盘圆（G 处置）+ 小锁。托盘 64dp ≈ 短边 110dp 的 0.58 倍，
+  2×2：浅红托盘圆 + 小锁。托盘 64dp ≈ 短边 110dp 的 0.58 倍，
   锁 33dp ≈ 0.30 倍 —— 都按 2×2 的标称尺寸（110×110dp）定，
   这样缩放后内容不会跟着变形，只是居中的图形看着更空一点。
 -->
@@ -13,7 +13,7 @@
     <!--
       ⚠️ 这里必须是 ImageView，**不能用 <View>**：RemoteViews 只允许一组白名单类
       （FrameLayout / LinearLayout / ImageView / TextView / …），android.view.View 不在里面，
-      用了它桌面会直接报「载入窗口小部件时出现问题」——3.1 第一版就是这么坏的（用户报的）。
+      用了它桌面会直接报「载入窗口小部件时出现问题」。
     -->
     <ImageView
         android:id="@+id/widget_badge"

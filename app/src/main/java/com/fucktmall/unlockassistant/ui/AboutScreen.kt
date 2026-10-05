@@ -54,46 +54,25 @@ import androidx.compose.ui.unit.sp
 import com.fucktmall.unlockassistant.R
 
 /**
- * 「了解本App」整页（3.3 起是独立 Activity，不再是盖在设置页上的弹窗）。
- *
- * 页面顺序（用户 3.3 定稿，**不要随手调整**）：
- *
- *   1. 三张插图**水平居中**：本App 图标 + 用户给的两张图；
- *   2. 版本号（**用户点名要放在三张图的正下方**，不是页尾）；
- *   3. 「开源代码」卡：GitHub 标 + `owner/repo` + 「点击访问 GitHub 项目」，整块可点；
- *   4. 「Vibed by: DeepSeek V4.1 Flash」致谢卡（**紧跟在开源代码卡下面**，用户点名的位置）；
- *   5. 无标题正文卡（无障碍那段）；
- *   6. 怎么用（自动开锁 / 仅提前打开 两种方式）；
- *   7. 如何进入设置界面。
- *
- * 顶栏是 **Material 3 `TopAppBar`**（用户 3.3 要求用 MD3 组件，别再自画顶栏）：
- * 返回键 = `navigationIcon`，用 Material 官方 `arrow_back` 矢量（`ic_arrow_back.xml`）。
- *
- * 图形资源全部出自 `tools/export_about_images.py`，**不要在 res 里手改**：
- *  - `il_about_icon.png` / `il_about_tmall.png`（`drawable-nodpi`）；
- *  - `il_about_mascot.webp` + `il_about_mascot_still.png`（**`res/raw/`** —— 放 `assets/` 会
- *    在运行时 FileNotFoundException，工程里没有 assets 源集，第一版就是这么翻车的）；
- *  - `ic_github.xml`（pathData 逐字取自用户给的 `github (1).svg`，手抄的那版图形是乱的）、
- *    `ic_stars.xml`（取自用户给的 `stars.svg`，「Vibed by」卡的星芒图标）、
- *    `ic_arrow_back.xml`（Material 官方）。
- *
- * 动画 WebP 的兼容策略：`BitmapFactory.decodeStream` 在 API 28+ 返回 `AnimatedImageDrawable`
- * （自己循环播），API 24–27 返回 `Bitmap`（只有第一帧）—— 一个调用覆盖两种机型，不用分支；
- * 真解不出来还有 `il_about_mascot_still.png` 兜底。
+ * 「了解本App」整页（独立 Activity，不是盖在设置页上的弹窗）。
+ * 页面顺序，**不要随手调整**：三张插图**水平居中**（本App 图标 + 天猫校园图 + 会动的吉祥物）
+ * → 版本号（**在三张图正下方**，不是页尾）→ 「开源代码」卡（整块可点）
+ * → 「Vibed by: DeepSeek V4.1 Flash」致谢卡（**紧跟在开源代码卡下面**）→ 无标题正文卡
+ * → 怎么用 → 如何进入设置界面。顶栏是 **Material 3 `TopAppBar`**。
+ * 图形资源全部出自 `tools/export_about_images.py`，**不要在 res 里手改**。
  */
 
 /** 插图行高度：三张图都用它当高度，宽度按各自长宽比推出来。 */
 private val ILLUSTRATION_HEIGHT = 96.dp
 
 /**
- * 三张图各自的**长宽比**（宽/高）。宽度一律按 `高度 × 比例` 算出来给死，
- * 这样即使某台设备把动画 WebP 解成了"尺寸不同的 drawable"，也不会被拉扁
- * （用户 3.3 反馈：GIF 被横向拉伸了一点 —— 原因是 `ContentScale.Fit` 拿到的是
- *  `AnimatedImageDrawable` 自己报的固有尺寸，跟位的真实比例对不上）。
+ * 三张图各自的**长宽比**（宽/高），宽度一律按 `高度 × 比例` 算出来给死：
+ * `ContentScale.Fit` 拿到的是 `AnimatedImageDrawable` 自己报的固有尺寸，跟真实比例对不上，
+ * 会被带偏成横向拉伸。
  */
 private const val ICON_RATIO = 192f / 192f      // 本App 图标（正方形）
-private const val TMALL_RATIO = 255f / 238f     // 255×238 ≈ 1.071
-private const val MASCOT_RATIO = 320f / 426f    // 320×426 ≈ 0.751
+private const val TMALL_RATIO = 255f / 238f     // 255×238
+private const val MASCOT_RATIO = 320f / 426f    // 320×426
 
 private val ICON_WIDTH = ILLUSTRATION_HEIGHT * ICON_RATIO
 private val TMALL_WIDTH = ILLUSTRATION_HEIGHT * TMALL_RATIO
@@ -125,11 +104,8 @@ fun AboutScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
         ) {
-            // ① 三张插图：**水平居中**（用户点名，改过两版）。
-            //    ⚠️ 上一版用 `Row(依赖内容宽度) + align(CenterHorizontally)`，用户看真机说
-            //    「不像居中」；现在用最不会出错的那种：外层 `Box(fillMaxWidth)` 撑满可用宽度，
-            //    内层 `Row` 只包三张图，居中交给外层的 `contentAlignment` —— 不依赖任何
-            //    「这个 Row 有多宽」的推断。
+            // 三张插图：**水平居中**交给外层 Box 的 `contentAlignment`，不依赖
+            // 「这个 Row 有多宽」的推断（外层撑满可用宽度，内层 `Row` 只包三张图）。
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -142,8 +118,6 @@ fun AboutScreen(onBack: () -> Unit) {
                     Illustration(R.drawable.il_about_tmall, TMALL_WIDTH)
                     Spacer(Modifier.width(10.dp))
                     // 满幅矩形图，套一层圆角跟卡片对齐（图标与天猫图自带透明边，不用套）。
-                    // `ContentScale.FillBounds`（不是 Fit）：宽高都已经按真实长宽比给死了，
-                    // 再交给 Fit 去"自己判断"反而会被 drawable 报的固有尺寸带偏。
                     if (mascot != null) {
                         AnimatedImage(
                             drawable = mascot,
@@ -156,7 +130,7 @@ fun AboutScreen(onBack: () -> Unit) {
                 }
             }
 
-            // ② 版本号：用户要求紧贴三张插图下方。
+            // 版本号：紧贴三张插图下方。
             Text(
                 text = stringResource(R.string.about_version, version.first, version.second),
                 modifier = Modifier
@@ -166,31 +140,30 @@ fun AboutScreen(onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // ③ 开源代码卡：整块可点，卡面自带「点这里」的提示 + 末尾箭头。
             RepoCard(onClick = { openRepo(ctx) })
 
             Spacer(Modifier.height(12.dp))
 
-            // ④ 致谢卡：**紧跟在「开源代码」卡下面**（用户 3.3 点名这个位置，别挪到页尾）。
+            // 致谢卡：**紧跟在「开源代码」卡下面**，别挪到页尾。
             VibedCard()
 
             Spacer(Modifier.height(12.dp))
 
-            // ⑤ **无标题**正文卡（用户 3.3：只去掉「它怎么做到的」这个标题，正文要留着）。
+            // 这段正文**不带标题**。
             StepCard {
                 BodyText(stringResource(R.string.about_what_body))
             }
 
             Spacer(Modifier.height(12.dp))
 
-            // ⑥ 两种用法。
+            // 两种用法。
             TitledCard(stringResource(R.string.about_how_title)) {
                 BodyText(stringResource(R.string.about_how_body))
             }
 
             Spacer(Modifier.height(12.dp))
 
-            // ⑦ 设置在哪。
+            // 设置在哪。
             TitledCard(stringResource(R.string.about_where_title)) {
                 BodyText(stringResource(R.string.about_where_body))
             }
@@ -201,10 +174,8 @@ fun AboutScreen(onBack: () -> Unit) {
 }
 
 /**
- * 「Vibed by」卡：浅色底（同正文卡的 `surfaceContainerLow`）+ 图标在左边 + 一行字。
- * 用户 3.3 指定：**位置在「开源代码」卡正下方**（不是页尾）。
- * 图标 3.4 起换成用户给的 `stars.svg`（星芒）—— 之前那张是 `icon-idea.svg`（灯泡），
- * 同样是 `tools/export_about_images.py` 原样搬运成 `ic_stars.xml`。
+ * 「Vibed by」卡：图标在左 + 一行字，**位置在「开源代码」卡正下方**（不是页尾）。
+ * 图标是 `ic_stars.xml`，由 `tools/export_about_images.py` 原样搬运。
  */
 @Composable
 private fun VibedCard() {
@@ -228,8 +199,7 @@ private fun VibedCard() {
 }
 
 /**
- * 解码插图 → 优先拿"会动的那个"。三个坑（assets 目录不存在、`BitmapFactory` 只给首帧、
- * `ImageDecoder.createSource` 不收 InputStream）与逐级兜底都写在 `MascotAnimation.kt` 里。
+ * 解码插图 → 优先拿"会动的那个"，失败再逐级退（见 `MascotAnimation.kt`）。
  */
 @Composable
 private fun rememberMascot(): Drawable? {
@@ -237,7 +207,7 @@ private fun rememberMascot(): Drawable? {
     return remember { loadMascot(ctx) }
 }
 
-/** 一张插图：高度固定 [ILLUSTRATION_HEIGHT]，宽度由调用方按长宽比算好传进来。 */
+/** 一张静态插图：高度固定 [ILLUSTRATION_HEIGHT]，宽度由调用方按长宽比算好传进来。 */
 @Composable
 private fun Illustration(resId: Int, width: Dp) {
     Image(
@@ -247,7 +217,7 @@ private fun Illustration(resId: Int, width: Dp) {
         modifier = Modifier
             .height(ILLUSTRATION_HEIGHT)
             .width(width),
-        // 尺寸已经按真实长宽比给死，这里不需要再让 painter 去"适配"。
+        // 尺寸已按真实长宽比给死，不需要再让 painter 去"适配"。
         contentScale = ContentScale.FillBounds
     )
 }
@@ -255,25 +225,18 @@ private fun Illustration(resId: Int, width: Dp) {
 /**
  * 会动的插图：**自己驱动帧**，不指望 drawable 自己会走。
  *
- * ⭐ 为什么必须自己驱动（用户 3.3 反馈「gif 不能动弹」的直接原因）：
- *  `AnimatedImageDrawable`（API 28+ 解动画 WebP/GIF 得到的那个）靠**宿主注册的回调**
- *  来决定何时推进到下一帧；`View` 体系里是 `setCallback(view)` 帮你做了这件事，
- *  而 Compose 里我们只是把 drawable 画到画布上，**没有任何人给它回调** ——
- *  于是它一直停在第一帧。第一版就是这么静止的。
+ * ⭐ `AnimatedImageDrawable`（API 28+ 解动画 WebP/GIF 得到的那个）靠**宿主注册的回调**
+ * 决定何时推进到下一帧；`View` 体系里 `setCallback(view)` 帮你做了，而 Compose 里我们只是
+ * 把 drawable 画到画布上，**没有任何人给它回调** —— 不自己驱动它永远停在第一帧。
+ * 所以显式 `start()`，再用 `withFrameNanos` 每帧重画逼它按时间推进（循环条件是 `isRunning`）。
+ * ✅ 必须先 `start()` 再看 `isRunning`：首次组合时它还是 false，当循环条件会一次都不进。
  *
- *  做法：`withFrameNanos` 每帧 invalidate 一次（`DrawScope` 会重画 ⇒ drawable 的
- *  `draw()` 被反复调用、内部按时间推进），同时显式 `start()`（`Animatable` 接口，
- *  `AnimatedImageDrawable` 和 `AnimationDrawable` 都有）。循环条件是 `isRunning`，
- *  播完/停掉就自动退出，不会白烧 CPU。
- *
- *  这里**不用** `ContentScale`：宽高由调用方按真实长宽比给死，直接铺满即可，
- *  免得再被 drawable 报的固有尺寸带偏（那正是"被横向拉伸"的来源）。
+ * 这里**不用** `ContentScale`：宽高由调用方按真实长宽比给死，直接铺满即可。
  */
 @Composable
 private fun AnimatedImage(drawable: Drawable, modifier: Modifier = Modifier) {
     LaunchedEffect(drawable) {
-        // ⚠️ 顺序：先 start() 再看 isRunning。上一版按 `running = isRunning` 的初值去循环，
-        // 首次组合时它还是 false（还没 start），于是 while 一次都不进 —— 图还是不动。
+        // ⚠️ 先 start() 再看 isRunning（原因见上）。
         val animatable = drawable as? Animatable
         animatable?.start()
         while (animatable?.isRunning == true) {
@@ -289,15 +252,9 @@ private fun AnimatedImage(drawable: Drawable, modifier: Modifier = Modifier) {
 }
 
 /**
- * 「开源代码」卡：GitHub 标 + `owner/repo` + 「点击访问 GitHub 项目」+ 末尾箭头。
- *
- * 用户 3.3 的三条要求都落在这里：标题是**开源代码**（不是「项目主页」）、
- * 去掉了原先那行小字说明、并且**要让人看得出能点** —— 所以卡面自带一句
- * 「点击访问 GitHub 项目」，右边再放一个 `chevron_right` 箭头（惯用的"这里能进去"提示），
- * 整卡 `clickable`（MD3 自带水波纹反馈）。
- *
- * 用 [MaterialTheme.colorScheme.primaryContainer] 底（浅红）：和正文卡
- * （surfaceContainerLow，近白）明显分开 —— 要的是「像名片」，不是普通正文。
+ * 「开源代码」卡：GitHub 标 + `owner/repo` + 「点击访问 GitHub 项目」+ 末尾箭头，整卡可点。
+ * 那句文案和 `chevron_right` 箭头都是为了让人看得出能点。
+ * 用 `primaryContainer` 底（浅红）：和近白的正文卡明显分开，要的是「像名片」。
  */
 @Composable
 private fun RepoCard(onClick: () -> Unit) {
@@ -360,9 +317,8 @@ private fun RepoCard(onClick: () -> Unit) {
 }
 
 /**
- * 右箭头（`chevron_right` 的几何：两条 45° 线）。
- * 用 [PathBuilder] 画 —— 它的方法名是后缀式的（相对 = `moveToRelative`/`lineToRelative`），
- * 跟 `Path` 上那套名字不一样。
+ * 右箭头（`chevron_right` 的几何：两条 45° 线）。用 [PathBuilder] 画 ——
+ * 它的方法名是后缀式的（相对 = `moveToRelative`/`lineToRelative`），跟 `Path` 那套不一样。
  */
 private fun chevronRight(): ImageVector {
     val path = PathBuilder().apply {
@@ -408,7 +364,7 @@ private fun TitledCard(title: String, content: @Composable () -> Unit) {
  * 点卡片 → 交给系统浏览器打开。
  *
  * 为什么要 `INTERNET` 权限：Android 规定 **App 自己**得有 INTERNET 才有资格把 http(s)
- * 链接交给别的应用（否则在 resolve 阶段就被拒）。本App **一行联网代码都没有**，
+ * 链接交给别的应用（否则在 resolve 阶段就被拒）。本App **没有任何联网代码**，
  * 这条权限的唯一用途就是这个跳转。
  *
  * 打不开就 toast 说清楚，不静默失败 —— 页面上那行 `owner/repo` 仍然可以照着手打。
@@ -421,8 +377,7 @@ private fun openRepo(ctx: Context) {
             }
         )
     } catch (t: Throwable) {
-        // ActivityNotFoundException 是预期内的；其他 Throwable 也一并兜住：
-        // 不要再因为这一下点击把整页崩掉。
+        // ActivityNotFoundException 是预期内的，其他 Throwable 也一并兜住，别让这一下点击崩掉整页。
         Log.w(TAG, "打开仓库链接失败（${t.javaClass.simpleName}）：${t.message}")
         Toast.makeText(ctx, ctx.getString(R.string.about_repo_failed), Toast.LENGTH_LONG).show()
     }

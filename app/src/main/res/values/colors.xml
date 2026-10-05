@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  小部件的颜色（浅色主题）。取色对齐 ui/Theme.kt 与 tools/make_icons.py：
-    widget_card  = #FFEDEA（红调色板 tone95，比 surface 再红一档；用户反馈原来的近白底「可以再红一点」）
-    widget_badge = primaryContainer #FFDAD6
-    widget_ring  = #FF8A80              （小部件锁梁那一支浅红）
+  小部件的颜色（浅色主题），对齐 ui/Theme.kt 与 tools/make_icons.py。
   深色主题下由 values-night/colors.xml 换成对应的暗色。
 -->
 <resources>

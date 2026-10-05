@@ -13,25 +13,16 @@ import java.nio.ByteBuffer
 import java.nio.channels.Channels
 
 /**
- * 「了解本App」页那张会动的插图怎么解出来。
+ * 「了解本App」页那张会动的插图怎么解出来：`ImageDecoder` → `BitmapFactory` → 静态兜底，
+ * 逐级退，全解不出来就返回 null，调用方不画那张图，不崩。
  *
- * 单独放一个文件，是因为这里踩过**三个**坑，都在这台真机上打日志看清楚了：
- *
- * 1. **不能 `ctx.assets.open(...)`**：本工程**没有** `src/main/assets/` 目录，
- *    放那儿会在运行时 `FileNotFoundException`（被 catch 吞掉 ⇒ 图上少一张）。
- *    图要放 `res/raw/`。见 `docs/40-pitfalls.md`。
- * 2. **`BitmapFactory.decodeStream` 不够**：它对 `res/raw` 里的**动画 WebP** 实测返回的是
- *    静态 `BitmapDrawable`（日志原文：
- *    `draw mascot: android.graphics.drawable.BitmapDrawable intrinsic=640x852`），
- *    也就是只有第一帧 —— 用户看到的就是"不能动弹"。
- *    正路是 `ImageDecoder`（API 28+）：它解动画 WebP 给 `AnimatedImageDrawable`，
- *    `isRunning`/`start()` 都是现成的，[AboutScreen] 用 `withFrameNanos` 驱动它重画。
- * 3. **`ImageDecoder.createSource` 不收 `InputStream`**（只有 `ByteBuffer` / `File` 两个重载），
- *    而 `openRawResource` 那种流也不支持 seek。做法：把 raw 读进 `ByteBuffer`
- *    （`res/raw` 的流就是普通文件流），再交给 `createSource(ByteBuffer)`。
- *
- * 失败时逐级退到静态首帧（`il_about_mascot_still.png`），再失败就返回 null —— 调用方
- * 直接不画那张图，**不崩**。
+ * 1. 资源放 **`res/raw/`**：本工程没有 `src/main/assets/` 源集，`ctx.assets.open` 会在运行时
+ *    `FileNotFoundException`。
+ * 2. `BitmapFactory.decodeStream` 对动画 WebP 只给第一帧（静态 `BitmapDrawable`），
+ *    所以 API 28+ 优先用 `ImageDecoder` 解出 `AnimatedImageDrawable`，`isRunning`/`start()`
+ *    都是现成的，[AboutScreen] 用 `withFrameNanos` 驱动它重画。
+ * 3. `ImageDecoder.createSource` 不收 `InputStream`（只有 `ByteBuffer`/`File`），而
+ *    `openRawResource` 的流不支持 seek —— 所以先读进 `ByteBuffer` 再交给 `createSource`。
  */
 internal fun loadMascot(ctx: Context): Drawable? {
     animatedMascot(ctx)?.let { return it }
@@ -47,7 +38,7 @@ internal fun loadMascot(ctx: Context): Drawable? {
     return null
 }
 
-/** API 28+ 才有 `ImageDecoder`；更老的系统直接返回 null，由调用方退到静态图。 */
+/** API 28+ 才有 `ImageDecoder`；老系统返回 null，由调用方退到静态图。 */
 private fun animatedMascot(ctx: Context): Drawable? {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return null
     return try {
@@ -60,7 +51,7 @@ private fun animatedMascot(ctx: Context): Drawable? {
     }
 }
 
-/** 让"没有 `ImageDecoder` 的老系统"也能拿到静态首帧。 */
+/** 把解码结果包成 `Drawable`。 */
 @Suppress("DEPRECATION")
 private fun Any.toDrawable(): Drawable? = when (this) {
     is Drawable -> this

@@ -1,23 +1,14 @@
 <resources>
-    <!--
-      这里是**给系统看的**文案：应用名、无障碍服务名/说明、桌面快捷方式标签、toast。
-      界面文案（向导、设置、对话框）已经全部搬进 Compose 代码里的 stringResource，
-      见 app/src/main/java/.../ui/*.kt；下面凡是只给 Compose 用的条目都留在这，
-      删掉了旧 XML 布局专用的那一批（避免出现两套已经对不上的向导文案）。
-
-      3.0 起应用名从「一键开门」改成「开锁」（用户要求），本文件里所有自称都要跟着改。
-    -->
+    <!-- 给系统看的文案：应用名、无障碍服务名/说明、桌面快捷方式标签、toast。
+         界面文案（向导、设置、对话框）在 Compose 代码的 stringResource 里，见 app/src/main/java/.../ui/*.kt。 -->
     <string name="app_name">开锁</string>
 
     <!-- 快捷方式 -->
     <string name="shortcut_settings_short">设置</string>
     <string name="shortcut_settings_long">打开设置与动作日志</string>
 
-    <!--
-      首次使用的 toaster：**故意只说一句话，不替用户做任何事**。
-      目的是让用户自己知道「设置在哪」——所以文案里必须点名"长按桌面图标"。
-    -->
-    <string name="toast_first_run">初次使用：长按桌面「开锁」图标 → 点「设置」完成向导</string>
+    <!-- 首次使用的 toast：只告诉用户「设置在哪」，所以文案里点名"长按桌面图标"。 -->
+    <string name="toast_first_run">初次使用：桌面长按本App的图标 → 点「设置」完成向导</string>
 
     <!-- 向导 -->
     <string name="wiz_title">初次使用向导</string>
@@ -27,37 +18,30 @@
     <string name="wiz_done">完成</string>
 
     <string name="wiz_s1_title">开启无障碍</string>
-    <string name="wiz_s1_body">本App 靠它自动跳过天猫校园的广告 / 更新弹窗。\n没开启就不能继续：开屏广告会挡住开锁页。</string>
+    <string name="wiz_s1_body">本App靠它自动跳过天猫校园的广告 / 更新弹窗。</string>
     <string name="wiz_s1_on">无障碍已开启</string>
     <string name="wiz_s1_off">还没开启，广告不会被跳过</string>
     <string name="wiz_s1_btn">去开启</string>
 
-    <!--
-      无障碍那一步的开启教程（3.4 新增）。**写成跨品牌的通用说法**（用户明确要求：
-      「用户不一定是小米手机」），所以：
-        · 系统里那一页叫「无障碍」还是「辅助功能」——两个名字都写；
-        · 服务列表叫「已下载的应用」还是「已安装的服务」——两个名字都写；
-        · 不写任何小米专属的东西（小米的「危险」提示框 / 勾选「我已知晓」/ 倒计时只作
-          "有的系统会这样" 提一句，不点名品牌）。
-      原先还有一行灰色小字（「不同机型路径会差一点…」），用户要求**并进正文**，已删；
-      差异说明分别落在第 1、2、4 步里。
-      ⚠️ 顺带记一笔**实测过的其中一条路径**（Redmi Turbo 4 Pro / HyperOS 3，仅当参考）：
-      设置 → 辅助功能 →「通用」标签页拉到底 →「已下载的应用」→「开锁 · 绕过广告/弹窗」
-      → 打开开关 →「危险」提示框勾选「我已知晓可能存在的风险…」→「确定」。
-    -->
+    <!-- 开启教程：系统的无障碍页和服务列表在不同机型上叫法不同，所以两个名字都写。 -->
     <string name="wiz_s1_tut_title">怎么开启</string>
-    <string name="wiz_s1_tut_1">点上面的「去开启」；没跳过去，就自己打开手机的「设置」。</string>
-    <string name="wiz_s1_tut_2">进「无障碍」或「辅助功能」，往下找到「已下载的应用 / 已安装的服务」——各家的叫法不一样。</string>
+    <string name="wiz_s1_tut_1">点上面的「去开启」；如果没跳过去，就自己打开手机的「设置」进「无障碍」或「辅助功能」。</string>
+    <string name="wiz_s1_tut_2">往下找到「已下载的应用 / 已安装的服务」。</string>
     <string name="wiz_s1_tut_3">在列表里找到「开锁 · 绕过广告/弹窗」，点进去并打开它。</string>
-    <string name="wiz_s1_tut_4">系统会弹风险提示：勾选「我已知晓…」再点「确定」（有的系统要等倒计时走完）。</string>
+    <string name="wiz_s1_tut_4">系统会弹风险提示：勾选「我已知晓…」再点「确定」（小米系统要等倒计时走完）。</string>
     <string name="wiz_s1_tut_5">回到本页，上面的状态变成「✓ 无障碍已开启」就能继续了。</string>
 
     <string name="wiz_need_a11y">还没开启无障碍，不能继续</string>
 
     <!--
-      向导第 2 步「允许后台运行」的条目：3.2 用户要求删掉那一步（省电策略看起来不会轻易杀掉
-      本App），条目留着是为了真出问题时能原样加回来 —— 现在**界面上没人用**。
+      点「去开启」时弹的 toast。按钮一点就跳到系统设置页，本App 的教程卡留在后面看不见，
+      所以这条只讲三件事：往下拉 → 列表叫什么 → 找哪一项。
+      ⚠️ 必须**先 show toast 再 startActivity**（见 WizardScreen 的 WizardHost）：跳走以后本App
+      立刻退到后台，Android 11+ 会直接丢掉后台 App 的 toast。
     -->
+    <string name="wiz_s1_toast">往下拉，找「已下载的应用 / 已安装的服务」，打开「开锁」</string>
+
+    <!-- 向导第 2 步「允许后台运行」的条目：现在**界面上没人用**，留着备用。 -->
     <string name="wiz_s2_title">允许后台运行</string>
     <string name="wiz_s2_body">系统省电时会杀掉本App。\n被杀了无障碍就失效，广告没法自动跳过。</string>
     <string name="wiz_s2_on">已允许后台运行</string>
@@ -67,14 +51,11 @@
     <string name="wiz_s3_title">可以用了</string>
     <string name="wiz_s3_body">以后打开本App，直接进开锁界面。\n要不要顺便替你按「点击开锁」，在设置里选。</string>
 
-    <!--
-      独立提示卡：以后想改设置去哪。
-      原来是夹在正文下面的灰色小字，用户反馈「太不明显」，所以单独做成一张卡（见 WizardScreen）。
-    -->
+    <!-- 独立提示卡：告诉用户以后想改设置去哪（见 WizardScreen）。 -->
     <string name="wiz_hint_title">以后想改设置？</string>
-    <string name="wiz_hint_body">长按桌面上的「开锁」图标，\n再点弹出的「设置」。</string>
+    <string name="wiz_hint_body">长按桌面上本App的图标，\n再点弹出的「设置」。</string>
 
-    <!-- 无障碍关闭时的提示（不再照旧打开） -->
+    <!-- 无障碍关闭时的提示 -->
     <string name="dlg_a11y_title">无障碍被关闭</string>
     <string name="dlg_a11y_body">无障碍负责跳过天猫校园的开屏广告。\n\n现在打开天猫校园，开屏广告不会被自动跳过，得你自己跳过。</string>
     <string name="dlg_a11y_go">去开启</string>
@@ -89,10 +70,7 @@
     <string name="set_a11y_on">无障碍已开启</string>
     <string name="set_a11y_off">无障碍未开启 · 广告不会被跳过</string>
     <string name="set_a11y_no_bind">设置里开着，但服务还没连上（等一会儿，或重开一次本App）</string>
-    <!--
-      「会话」这个词用户反馈不好理解，3.0 起界面上不再出现它，
-      一律说「自动跳过弹窗」这件事本身（代码里 Session 这个名字保留，见 Session.kt）。
-    -->
+    <!-- 「会话」这个词界面上不出现，一律说「自动跳过弹窗」这件事本身（代码里 Session 这个名字保留，见 Session.kt）。 -->
     <string name="set_auto_active">自动跳过弹窗中，还剩 %1$d 秒</string>
     <string name="set_auto_none">自动跳过已结束（每次打开后 90 秒内有效）</string>
     <string name="set_click_count">累计点掉弹窗：%1$d 个</string>
@@ -107,21 +85,14 @@
     <!-- 独立整页顶栏返回按钮的无障碍描述（图标本身没文字，读屏靠这条）。 -->
     <string name="nav_back">返回</string>
 
-    <!--
-      「了解本App」整页（3.3 起是独立 Activity，不再是弹窗）。
-      文案由用户定稿，页面顺序也由用户指定：三张插图 → 版本号 → 开源代码卡 → 正文卡
-      →「怎么用」→「如何进入设置界面」→「Vibed by」。
-      3.3 第二版按用户反馈改：卡标题「项目主页」→「开源代码」、去掉那行小字说明、
-      「已在 GitHub 开源：」→「点击访问 GitHub 项目」（让用户看得出这张卡能点）、
-      「它怎么做到的」**只去掉标题**（正文 `about_what_body` 留着）。
-    -->
+    <!-- 「了解本App」整页（独立 Activity）。页面顺序：三张插图 → 版本号 → 开源代码卡 → 正文卡 →「怎么用」→「如何进入设置界面」→「Vibed by」。 -->
     <string name="about_title">关于「开锁」</string>
     <string name="about_repo_title">开源代码</string>
     <string name="about_repo_path">lincannm/tianmao-campus-auto-unlocker</string>
     <string name="about_repo_open">点击访问 GitHub 项目</string>
     <string name="about_repo_failed">打不开浏览器 · 链接：lincannm/tianmao-campus-auto-unlocker</string>
     <string name="about_version">版本 %1$s（versionCode %2$d）</string>
-    <!-- 这张卡**没有标题**（用户 3.3：只不要「它怎么做到的」这个标题，正文要留着）。 -->
+    <!-- 这张卡只有正文，没有标题。 -->
     <string name="about_what_body">本 App 利用无障碍权限，实现自动化跳过广告和更新弹窗，从桌面一路跳转到天猫校园的开锁界面，且可以自动点击开锁。</string>
     <string name="about_how_title">怎么用</string>
     <string name="about_how_body">两种方式：\n\n· 自动开锁：点桌面上的本App图标/小部件 → 直达门锁页，并替你按一次「点击开锁」。\n· 仅提前打开：打开本App → 只送到门锁页，不代按开锁按钮。\n\n两种方式都能在设置里分别开关。</string>
@@ -129,7 +100,7 @@
     <string name="about_where_body">长按桌面上的「开锁」图标 → 点「设置」。</string>
     <string name="about_vibed">Vibed by: DeepSeek V4.1 Flash</string>
 
-    <!-- 代按开锁的两个开关（3.1）。界面上「打开 App」在前、「小部件」在后（3.2 换序）。 -->
+    <!-- 代按开锁的两个开关。 -->
     <string name="set_unlock_app">打开 App 时自动点开锁</string>
     <string name="set_unlock_app_desc">开了以后，从桌面图标进来会替你按一次「点击开锁」。</string>
     <string name="set_unlock_widget">点小部件后自动点开锁</string>

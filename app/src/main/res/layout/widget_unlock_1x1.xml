@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  1×1 小部件：只有一只双色锁（用户定的「纯图标」方案，分配到的处置是 J 裸锁）。
+  1×1 小部件：只有一只双色锁。
   卡面颜色由 @color/widget_card 决定，深色主题自动切到 values-night 里那份。
   锁图 @drawable/ic_widget_lock 由 tools/make_icons.py 生成（透明底 PNG，
   锁的最长边铺满方形画布，所以这里是 18dp 的方框 + fitCenter，

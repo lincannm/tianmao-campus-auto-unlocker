@@ -15,15 +15,9 @@ import com.fucktmall.unlockassistant.ui.WizardHost
 /**
  * 设置 / 控制面板外壳（UI 在 [SettingsScreen]，Compose + Material 3）。
  *
- * 入口是**长按桌面图标 → 设置**（静态快捷方式，见 res/xml/shortcuts.xml），
- * 以及 deep link 抛失败时的落地页。
- *
- * ## ⭐ 3.0：初次使用向导也挂在这里
- *
- * 用户要求「首次打开本App 不做任何动作，只弹 toast 让他自己长按图标进设置」，
- * 所以向导不再由 [MainActivity] 展示，而是**在这里**：
- * 还没 onboarded 时（或用户点了面板里的「重进初次使用向导」）直接显示向导。
- * 向导走完就 `finish()` —— **退出，不打开天猫校园**（用户要求）。
+ * 入口：**长按桌面图标 → 设置**（静态快捷方式，见 res/xml/shortcuts.xml），以及
+ * deep link 抛失败时的落地页。初次使用向导也挂在这里（还没 onboarded，或点了面板里的
+ * 「重进初次使用向导」时直接显示）；向导走完就 `finish()`，不打开天猫校园。
  */
 class SettingsActivity : ComponentActivity() {
 
@@ -45,7 +39,7 @@ class SettingsActivity : ComponentActivity() {
                         resumeTick = resumeTick.intValue,
                         onFinish = {
                             // 偏好已由 WizardHost 写完（onboarded=true）。
-                            // 这里只退出：用户明确要求不要在向导结束时打开天猫校园。
+                            // 这里只退出：向导结束时不开天猫校园。
                             finish()
                         }
                     )

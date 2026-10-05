@@ -8,34 +8,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 /**
- * 主题：**红色**（用户 3.0 要求，之前是 MD3 baseline 的紫色）。
- *
- * 色值取自 Material 的红色系：`primary = #E53935`（Material Red 600）。
- * **图标/配色修订起从 MD3 红 tone 40 `#B3261E` 换成它**（版本号没动，仍是 3.0 / versionCode 5）：
- * 用户反馈 tone 40 那支「发灰、显老气」，
- * 要求饱和度高一些（鲜艳）；同一轮里把桌面图标背景也换成同一支红，保证图标与界面同色。
- * 代价是白字对比度从 6.5:1 降到 4.2:1（仍 ≥4.5 一档的边界、远高于大字 3:1 的门槛），
- * 按钮是 20sp 加粗、进度条与开关都是大色块，实测观感没问题。
- * 中性色（卡片、对话框、日志底）仍然是同一套带红味的暖灰，`error` / `tertiary` 一个没动 ——
- * 「状态胶囊不能跟主题撞色」那条约束（见下）继续成立。
+ * 主题：**红色**，`primary = #E53935`（Material Red 600），中性色是同一套带红味的暖灰。
  *
  * 没有用 dynamicLightColorScheme（API 31+ 从壁纸取色）：界面颜色随机器变会让排查问题变麻烦。
  *
- * ## ⭐ 「已达成」的状态胶囊用什么颜色（改过三轮，这是第三轮）
- *
- * 难点：本主题里 `primaryContainer` 与 `errorContainer` 的值**是同一个** `#FFDAD6`
- * （同一套 MD3 红色调色板的 tone90），所以「已达成 / 未达成」不能一只用
- * primaryContainer、另一只还用 errorContainer —— 那样两只胶囊颜色完全一样。
- *
- * 走过的两版：
- *  - 第一版给「已达成」配了**绿**，用户反馈「跟红色主题不搭、显得突兀」；
- *  - 第二版改用 **tertiary（暖琥珀金）** `tertiaryContainer`；
- *  - **现在（用户最新反馈「不太符合主题色」）**：整页收敛回**红色一支色系**，靠深浅分状态：
- *      已达成 = `primaryContainer` `#FFDAD6` 浅红底 + `onPrimaryContainer` `#410002` 深红字（软）
- *      未达成 = `error` `#BA1A1A` 实心深红底 + `onError` 白字（硬）
- *    「坏消息」比「好消息」响亮，符合状态语义；两只的对比度分别是 13:1 与 6.5:1，都够。
- *  `tertiary`（暖琥珀金）本身**没有删**，色板里还在，只是当前没有界面元素在用它。
- *  取色一律走色板，不写死常量，改主题时会跟着变。
+ * ⚠️ 本主题里 `primaryContainer` 与 `errorContainer` 的值**是同一个** `#FFDAD6`
+ * （同一套 MD3 红色调色板的 tone90），所以「已达成 / 未达成」两只状态胶囊必须一只用
+ * `primaryContainer`、另一只改用实心 `error` —— 详见 [StatusChip]。
+ * `tertiary`（暖琥珀金）留在色板里，当前没有界面元素在用。
  */
 
 private val LightColors = lightColorScheme(

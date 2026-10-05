@@ -14,22 +14,21 @@ import com.fucktmall.unlockassistant.R
 import com.fucktmall.unlockassistant.Session
 
 /**
- * 「开锁」桌面小部件（3.1）。
+ * 「开锁」桌面小部件。
  *
  * 设计约定：**小部件 = 桌面图标**。点它只是带着
  * [MainActivity.ACTION_WIDGET_UNLOCK] 把 [MainActivity] 拉起来，后面判向导、判无障碍、
- * 抛 deep link、开 90 秒时间窗、清弹窗、代按开锁这一整套**全走同一条已经验证过的链路**，
+ * 抛 deep link、开 90 秒时间窗、清弹窗、代按开锁这一整套**全走同一条链路**，
  * 小部件自己不判断任何东西 —— 否则就有第二套逻辑，以后必然分叉。
  * 唯一的差别是「要不要代按一次开锁」：小部件入口看
  * [com.fucktmall.unlockassistant.AppState.isUnlockOnWidget]（默认开），
  * 图标入口看 [com.fucktmall.unlockassistant.AppState.isUnlockOnApp]（默认关）。
  *
  * 为什么是 RemoteViews 而不是 androidx.glance：小部件本来就是 RemoteViews 的封装，
- * 引 glance 要新增外部依赖（本机拉新包一旦碰上网络/证书问题就得停下来报告），
- * 而这里只需要「一张卡 + 一只锁 + 一个点击目标」。
+ * 引 glance 要新增外部依赖，而这里只需要「一张卡 + 一只锁 + 一个点击目标」。
  *
  * 尺寸：四张独立卡（1×1 / 2×1 / 2×2 / 4×2），放置后都能自由缩放；
- * 缩放后按**实测尺寸**换布局档（见 [layoutFor]）。
+ * 缩放后按实际尺寸换布局档（见 [layoutFor]）。
  */
 abstract class BaseUnlockWidgetProvider : AppWidgetProvider() {
 
@@ -59,8 +58,8 @@ abstract class BaseUnlockWidgetProvider : AppWidgetProvider() {
         val views = RemoteViews(context.packageName, layout)
         views.setOnClickPendingIntent(R.id.widget_root, clickIntent(context))
 
-        // 装饰与锁按**实测尺寸等比缩放**：布局里那些 dp 是「110dp 短边」标定的默认值，
-        // 写死它们会让大卡显得空、小卡显得挤（3.1 用户报的「间距、大小都不适当」）。
+        // 装饰与锁按实际尺寸等比缩放：布局里那些 dp 是「110dp 短边」标定的默认值，
+        // 写死它们会让大卡显得空、小卡显得挤。
         val short = minOf(w, h).toFloat()
         val detail = when {
             short <= 0f -> "用布局默认尺寸"
@@ -82,15 +81,14 @@ abstract class BaseUnlockWidgetProvider : AppWidgetProvider() {
 
         manager.updateAppWidget(id, views)
 
-        // 记一行日志：档位或尺寸算错了在桌面上很难看出来（第一版把 2×1 渲染成了宽卡），
+        // 记一行日志：档位或尺寸算错了在桌面上很难看出来，
         // 有这行就能直接对上「桌面给了多大 → 用了哪张布局 → 元素多大」。
         Session.addLog("小部件 #$id 渲染：桌面给 ${w}×${h}dp → ${layoutName(layout)}，$detail")
     }
 
     /**
      * 运行时改视图尺寸。**API 31+ 才有** `RemoteViews.setViewLayoutWidth/Height`
-     * （第三参是 `TypedValue` 的单位常量，不是 `MeasurementUnit` —— 后者在 SDK 里不存在，
-     * 3.1 编译时踩过：`Unresolved reference 'MeasurementUnit'`）；
+     * （第三参是 `TypedValue` 的单位常量，不是 `MeasurementUnit` —— 后者在 SDK 里不存在）；
      * 更低版本退回布局里写死的 dp（那套值按 110dp 短边标定）。
      */
     private fun resize(views: RemoteViews, viewId: Int, dp: Float) {
@@ -118,7 +116,6 @@ abstract class BaseUnlockWidgetProvider : AppWidgetProvider() {
         /**
          * 元素尺寸比例（都相对**卡片短边**）：
          *   裸锁 0.44；托盘圆 0.58 + 里面的锁 0.30；细环 0.70 + 里面的锁 0.30。
-         * 和设计稿（`work/widgets/preview/final_widget_day.png`）用的是同一组数字。
          */
         private const val LOCK_RATIO = 0.44f
         private const val BADGE_RATIO = 0.58f
@@ -126,19 +123,19 @@ abstract class BaseUnlockWidgetProvider : AppWidgetProvider() {
         private const val LOCK_SMALL_RATIO = 0.30f
 
         /**
-         * 按**实测尺寸**（dp）选布局档。
+         * 按实际尺寸（dp）选布局档。
          *
-         * ⚠️ 两条踩过的坑：
-         *  1. 桌面传进来的是**它实际分给这张卡的格子尺寸**（本机实测：1 格 ≈ 65–84dp、
+         * ⚠️ 两条必须知道的约束：
+         *  1. 桌面传进来的是**它实际分给这张卡的格子尺寸**（本机：1 格 ≈ 65–84dp、
          *     2 行 ≈ 184dp、4 格宽 ≈ 343dp），**不是**说明书里写的 110×40 / 250×110；
-         *  2. 所以不能用写死的 dp 阈值：第一版用 `w>140 → wide`，2×1（158 宽）就被当成宽卡渲染，
-         *     而 2 格宽在不同机型上可能是 130dp，又会掉进 1×1。
+         *  2. 所以不能按写死的 dp 阈值判断宽卡：2×1 与 2 格宽在不同机型上宽度差别很大，
+         *     固定阈值会把它们分错档。
          *
-         * 现在按「行数 + 宽高比」判断，跨机型都成立：
+         * 判断按「行数 + 宽高比」：
          *   `twoRows`：1 行约 65–110dp、2 行约 130–220dp，取中间值 130 当分界；
-         *   `sideways`：宽明显大于高（>1.35 倍）= 横条 / 宽卡；
-         *   `tallNarrow`：高明显大于宽（≥1.4 倍）= 竖长条 —— 这种卡片上放「托盘圆」会孤零零
-         *   浮在中间一大片空白里（用户摆出来就是这个效果），所以退回**裸锁**。
+         *   `sideways`：宽大于高 1.35 倍 = 横条 / 宽卡；
+         *   `tallNarrow`：高 ≥ 宽的 1.4 倍 = 竖长条 —— 这种卡片上放「托盘圆」会孤零零
+         *   浮在中间一大片空白里，所以退回**裸锁**。
          */
         fun layoutFor(widthDp: Int, heightDp: Int): Int {
             val tallNarrow = heightDp >= widthDp * 1.4

@@ -45,17 +45,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fucktmall.unlockassistant.R
 
-/**
- * 界面零件。全部按 Material Design 3 写：
- *  - 文字用 MD3 的字号/行高（titleLarge 22、headlineSmall 24、bodyLarge 16）；
- *  - 按钮是 MD3 的 40dp+ 高度、全圆角（pill）；
- *  - 卡片容器用 surfaceContainerLow，对话框用 MD3 的 AlertDialog（28dp 圆角）。
- *
- * 边到边：inset 交给 [Screen] 里的 windowInsetsPadding(WindowInsets.safeDrawing)，
- * 取代原来手写的那套 Ui.applyInsets。
- *
- * 主题色是红色（见 [UnlockTheme]）。
- */
+/** 界面零件，按 Material Design 3 写：MD3 字号/行高、40dp+ 全圆角按钮、
+ *  surfaceContainerLow 卡片、AlertDialog 对话框。
+ *  边到边 inset 交给 [Screen] 的 `windowInsetsPadding(WindowInsets.safeDrawing)`；主题色见 [UnlockTheme]。 */
 
 @Composable
 fun Screen(content: @Composable ColumnScope.() -> Unit) {
@@ -70,17 +62,13 @@ fun Screen(content: @Composable ColumnScope.() -> Unit) {
 }
 
 /**
- * 页头：**Material 3 的 [TopAppBar]**（用户 3.3 明确要求用 MD3 组件，别再自画）。
+ * 页头：Material 3 的 [TopAppBar]（`@ExperimentalMaterial3Api`，所以要 [OptIn]）。
+ * [onBack] 给了就在最左边出一个返回按钮（`navigationIcon` + `IconButton` + 官方 `arrow_back` 矢量），
+ * 只有独立整页需要。
  *
- * [onBack] 给了就在最左边出一个返回按钮（`navigationIcon` + `IconButton` + 官方 `arrow_back` 矢量）——
- * 只有独立整页需要（设置页是长按图标直达的顶层页，没有上一级）。
- *
- * ⚠️ `TopAppBar` 在 material3 里是 `@ExperimentalMaterial3Api` 的，所以要 [OptIn]
- * （它同时给了返回按钮 48dp 的触摸目标、正确的标题排版和 M3 配色，比自己摆一行文字划算）。
- *
- * ⚠️ **`windowInsets` 必须归零**（`WindowInsets(0)`）：本 App 的外层 [Screen] 已经用
+ * ⚠️ **`windowInsets` 必须归零**（`WindowInsets(0)`）：外层 [Screen] 已经用
  * `windowInsetsPadding(WindowInsets.safeDrawing)` 统一处理了状态栏/手势条，
- * [TopAppBar] 默认还会再加一份状态栏高度，那样标题会被顶下去一截。
+ * [TopAppBar] 默认还会再加一份状态栏高度，标题会被顶下去一截。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -126,7 +114,7 @@ fun ScreenHeader(title: String, subtitle: String? = null, onBack: (() -> Unit)? 
     )
 }
 
-/** 进度条：比「第 1 步 / 共 3 步」这行字更快看懂自己在哪。 */
+/** 进度条：一眼看出自己在第几步。 */
 @Composable
 fun StepBars(total: Int, current: Int) {
     Row(
@@ -169,13 +157,7 @@ fun StepCard(
     }
 }
 
-/**
- * 需要用户注意的提示卡（主题色底，和普通内容卡明显分开）。
- *
- * 存在的理由：向导里「以后想改设置」原来只是正文下面一行灰色小字，
- * 用户反馈太不明显 —— 而这句话恰恰是本次向导要教会用户的事（设置在哪）。
- * 所以给它一张自己的卡 + 主题色底 + 加粗标题。
- */
+/** 需要用户注意的提示卡：主题色底 + 加粗标题，和普通内容卡明显分开；向导里用它讲「以后想改设置」。 */
 @Composable
 fun NoticeCard(title: String, body: String, modifier: Modifier = Modifier) {
     Surface(
@@ -203,21 +185,14 @@ fun NoticeCard(title: String, body: String, modifier: Modifier = Modifier) {
 }
 
 /**
- * 编号步骤卡（3.4 新增）：教用户「在系统设置里怎么点」。
+ * 编号步骤卡：教用户「在系统设置里怎么点」。与 [NoticeCard] 同色系，但一眼看得出是"照做"的清单。
  *
- * 为什么要它：向导第 1 步是「开启无障碍」，而那一页**不在本App 里** ——
- * 用户点完「去开启」就跳进系统设置，回来时全靠记忆。原来的做法是正文下面一行灰色小字
- * （「在系统列表里找到「开锁」并打开」），实测不够：那一页可能叫「无障碍」也可能叫「辅助功能」，
+ * 为什么需要：向导第 1 步要用户去系统设置开无障碍，而那一页**不在本App 里** ——
+ * 用户点完就跳走，回来时全靠记忆；那一页可能叫「无障碍」也可能叫「辅助功能」，
  * 服务列表还藏在「已下载的应用 / 已安装的服务」里，只给一句话等于让人自己找。
- * 所以改成**带序号圆点的分步清单**（与 [NoticeCard] 同色系，但一眼看得出是"照做"的清单）。
+ * ⚠️ 正文必须用**跨品牌的通用说法**：不能把某一个品牌的路径当成所有人的路径。
  *
- * ⚠️ 两条来自用户的约束（3.4）：
- *  ① **正文用跨品牌的通用说法**（「用户不一定是小米手机」）—— 别在步骤里写小米专属的路径；
- *  ② 不要在这张卡底下再挂一行灰色小字，**差异说明要并进各步骤正文**
- *     （所以这里没有 `note` 参数了）。
- * 步骤文字用 16sp/26sp，与 [BodyText] 同档 —— 它是正文，不是注释。
- *
- * 序号圆点用 `onPrimaryContainer` 实心底 + `primaryContainer` 字色 —— 就是在主题色上挖空，
+ * 序号圆点是 `onPrimaryContainer` 实心底 + `primaryContainer` 字色 —— 在主题色上挖空，
  * 不需要额外的语义色（本主题里可用色不多，见 [StatusChip] 的说明）。
  */
 @Composable
@@ -311,16 +286,9 @@ fun HintText(text: String) {
  * 状态胶囊。已达成 = **浅红底 + 深红字**（primaryContainer / onPrimaryContainer），
  * 没达成 = **实心深红 + 白字**（error / onError）。
  *
- * ⭐ 为什么两只都用红、却不会混：本主题里 `primaryContainer` 与 `errorContainer`
- * 的值**是同一个** `#FFDAD6`（同一套 MD3 红色调色板的 tone90），所以「已达成」以前
- * 才被挪去用绿、后来又改用暖琥珀金 `tertiaryContainer`。用户最新一轮反馈：琥珀金
- * **不在红色家族里、跟主题色不搭** —— 于是改成「同色系、分深浅」：
- * 已达成是浅红容器（软），没达成是实心 `error` 红（硬）。
- * 状态仍然一眼可分，而整页**只剩红一支色系**。
- *
- * 注意「没达成」必须跟着一起用 `error` 实心 —— 如果继续用 `errorContainer`，
- * 两只胶囊会变成一模一样的 `#FFDAD6`，等于没有状态区分。
- * 取色一律走色板，不写死常量，改主题时会跟着变。
+ * ⭐ **两只必须一起改**：本主题里 `primaryContainer` 与 `errorContainer` 的值**是同一个**
+ * `#FFDAD6`（同一套 MD3 红色调色板的 tone90），所以「没达成」不能再用 `errorContainer`
+ * —— 那样两只胶囊会一模一样，等于没有状态区分。取色一律走色板，不写死常量。
  */
 @Composable
 fun StatusChip(ok: Boolean, okText: String, badText: String) {
@@ -458,14 +426,9 @@ fun NoTmallDialog(onDismiss: () -> Unit) {
 }
 
 /**
- * 「了解本App」原来是个 AlertDialog（[AboutDialog]，3.0 起），
- * **3.3 起改成独立整页**（[AboutScreen] + `AboutActivity`）——用户要求「不要弹窗，跳转到新的 activity」。
- * 弹窗放不下插图和三段说明，而且它是盖在设置页上的，看上去像临时提示；
- * 整页有返回键、能滚动、还能放下三张插图。
- *
- * 版本号从 PackageManager 现读，不引 BuildConfig ——
- * 这样不用为了一个字符串去开 `buildFeatures.buildConfig`，
- * 也不会出现「代码里的版本号和实际装的包不一致」。读不到就显示 "?"。
+ * 版本号：从 PackageManager 现读，**不引 BuildConfig** —— 这样不用为了一个字符串去开
+ * `buildFeatures.buildConfig`，也不会出现「代码里的版本号和实际装的包不一致」。
+ * 读不到就显示 "?"。给 [AboutScreen] 的版本行用。
  */
 @Suppress("DEPRECATION")
 @Composable

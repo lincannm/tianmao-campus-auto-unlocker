@@ -1,12 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  静态快捷方式：长按桌面图标 -> 设置。
-  这是「自动跳转」开着之后，用户进入设置面板的**唯一入口**，所以它是必需的，
-  不是装饰。
-
+  静态快捷方式：长按桌面图标 -> 设置。这是用户进入设置面板的**唯一入口**，所以它是必需的。
   targetClass 必须写全限定名；shortcutIcon 用**专用**的齿轮图标
-  （`drawable-*dpi/ic_shortcut_settings.png`，由 `tools/make_icons.py` 生成），
-  不再复用应用图标 —— 复用的话长按菜单里「设置」和 App 本身长得一样，分不出来。
+  （`drawable-*dpi/ic_shortcut_settings.png`，由 `tools/make_icons.py` 生成）。
 -->
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
 
