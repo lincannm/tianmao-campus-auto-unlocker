@@ -27,7 +27,7 @@
     <string name="wiz_s1_tut_title">怎么开启</string>
     <string name="wiz_s1_tut_1">点上面的「去开启」；如果没跳过去，就自己打开手机的「设置」进「无障碍」或「辅助功能」。</string>
     <string name="wiz_s1_tut_2">往下找到「已下载的应用 / 已安装的服务」。</string>
-    <string name="wiz_s1_tut_3">在列表里找到「开锁 · 绕过广告/弹窗」，点进去并打开它。</string>
+    <string name="wiz_s1_tut_3">在列表里找到「开锁」，点进去并打开它。</string>
     <string name="wiz_s1_tut_4">系统会弹风险提示：勾选「我已知晓…」再点「确定」（小米系统要等倒计时走完）。</string>
     <string name="wiz_s1_tut_5">回到本页，上面的状态变成「✓ 无障碍已开启」就能继续了。</string>
 
@@ -49,10 +49,10 @@
     <string name="wiz_s2_btn">去设置</string>
 
     <string name="wiz_s3_title">可以用了</string>
-    <string name="wiz_s3_body">以后打开本App，直接进开锁界面。\n要不要顺便替你按「点击开锁」，在设置里选。</string>
+    <string name="wiz_s3_body">以后打开本App，直接进开锁界面。\n\n接下来的可选步骤：\n打开本App的「设置」，选择要不要顺便替你按「点击开锁」。</string>
 
     <!-- 独立提示卡：告诉用户以后想改设置去哪（见 WizardScreen）。 -->
-    <string name="wiz_hint_title">以后想改设置？</string>
+    <string name="wiz_hint_title">怎么进入「设置」面板</string>
     <string name="wiz_hint_body">长按桌面上本App的图标，\n再点弹出的「设置」。</string>
 
     <!-- 无障碍关闭时的提示 -->
@@ -74,7 +74,7 @@
     <string name="set_auto_active">自动跳过弹窗中，还剩 %1$d 秒</string>
     <string name="set_auto_none">自动跳过已结束（每次打开后 90 秒内有效）</string>
     <string name="set_click_count">累计点掉弹窗：%1$d 个</string>
-    <string name="set_btn_about">了解本App</string>
+    <string name="set_btn_about">-&gt; 了解本App! &lt;-</string>
     <string name="set_btn_open">立即打开开锁界面</string>
     <string name="set_btn_stop">停止自动跳过</string>
     <string name="set_btn_a11y">无障碍设置</string>
@@ -117,6 +117,6 @@
     <string name="widget_desc_4x2">大卡。点一下直达天猫校园门锁页。</string>
     <string name="widget_lock_desc">开锁</string>
 
-    <string name="service_label">开锁 · 绕过广告/弹窗</string>
+    <string name="service_label">开锁</string>
     <string name="service_desc">在「开锁」自动跳过弹窗的这段时间里，跳过天猫校园的开屏广告、广告弹窗与更新提示。</string>
 </resources>
