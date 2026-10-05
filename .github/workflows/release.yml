@@ -51,6 +51,9 @@ jobs:
 
       - name: 构建 release APK
         run: |
+          # Windows 上提交的仓库容易丢掉 gradlew 的可执行位（clone 出来是 644 → "./gradlew: Permission denied"，exit 126），
+          # 所以这里先补一次，别指望仓库里的 mode 一定对。
+          chmod +x gradlew
           # gradle.properties 在本机写的是 D:/jdk-* 那种 Windows 路径，在 Linux 上解析不到，
           # 所以这里用同一个属性覆盖成运行器上的 JDK 25（否则守护进程会去联网下一份 JDK）。
           ./gradlew --no-daemon --console=plain assembleRelease \
