@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   小部件的颜色（浅色主题），对齐 ui/Theme.kt 与 tools/make_icons.py。
-  深色主题下由 values-night/colors.xml 换成对应的暗色。
+  卡面与窗口底色 / 应用图标底色同一支（`#FFF8F6` 红调色板 tone98）：
+  小部件是贴在桌面上的，跟桌面图标看起来是一套比跟卡片同色更说得通。
+  深色主题下由 values-night/colors.xml 换成对应的暗色（锁图在那种卡面上才看得清）。
 -->
 <resources>
-    <color name="widget_card">#FFEDEA</color>
+    <color name="widget_card">#FFF8F6</color>
     <color name="widget_badge">#FFDAD6</color>
     <color name="widget_ring">#FF8A80</color>
 </resources>

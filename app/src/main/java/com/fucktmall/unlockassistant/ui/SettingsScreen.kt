@@ -42,13 +42,16 @@ import kotlinx.coroutines.delay
  * 入口是**长按桌面图标 → 设置**（静态快捷方式），以及 deep link 抛失败时的落地页。
  * 面板每秒刷一次：无障碍状态、自动跳过剩余时间、累计点掉的弹窗数、动作日志
  * （日志每行带 `HH:mm:ss` 时间戳，见 `Session.addLog`）。卡内底部是「了解本App」，
- * 跳转到独立整页 [AboutActivity]。本App 对系统设置**只读**，不申请 `WRITE_SECURE_SETTINGS`。
+ * 跳转到独立整页 [AboutActivity]；小部件那张卡底部是「小组件添加至桌面」，
+ * 跳转到独立整页 `WidgetPinActivity`（授桌面快捷方式权限 + 把小部件固定到桌面）。
+ * 本App 对系统设置**只读**，不申请 `WRITE_SECURE_SETTINGS`。
  */
 @Composable
 fun SettingsScreen(
     resumeTick: Int,
     onOpenA11y: () -> Unit,
-    onOpenWizard: () -> Unit
+    onOpenWizard: () -> Unit,
+    onOpenWidgetPin: () -> Unit
 ) {
     val ctx = LocalContext.current
 
@@ -164,6 +167,15 @@ fun SettingsScreen(
                     }
                 )
                 HintText(stringResource(R.string.set_unlock_widget_desc))
+                Spacer(Modifier.height(14.dp))
+                // 次要按钮（空心）：把小部件放到桌面的整套引导在独立整页里
+                // （先授「桌面快捷方式」权限，再走系统的「固定小部件」请求）——
+                // 那两件事都带厂商差异，塞进设置面板会把这里撑成说明书。
+                OutlinedActionButton(
+                    text = stringResource(R.string.set_btn_widget_pin),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onOpenWidgetPin
+                )
             }
 
             Spacer(Modifier.height(12.dp))

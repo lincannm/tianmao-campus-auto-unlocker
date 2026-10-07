@@ -85,6 +85,16 @@
             android:launchMode="singleTop" />
 
         <!--
+          「小组件添加至桌面」引导页：先引导授「桌面快捷方式」权限，再调系统的「固定小部件」请求。
+          exported=false：只有设置页那个空心按钮会拉起它。
+        -->
+        <activity
+            android:name=".WidgetPinActivity"
+            android:exported="false"
+            android:label="@string/wpin_title"
+            android:launchMode="singleTop" />
+
+        <!--
           桌面小部件（3.1）：四张独立卡，1×1 / 2×1 / 2×2 / 4×2，每张放置后都能自由缩放。
           每个入口一个子类（同名 receiver 在清单里会被合并，没法用一个类挂四份 meta-data）。
           exported=false：小部件的更新广播由系统投递，外部 App 没有理由触发它
@@ -137,6 +147,14 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_unlock_4x2_info" />
         </receiver>
+
+        <!--
+          「小部件真的加到桌面上了」的回调（`requestPinAppWidget` 的 successCallback 打过来）。
+          exported=false：发它的是我们自己创建的那个 PendingIntent，外部 App 没有理由触发它。
+        -->
+        <receiver
+            android:name=".widget.WidgetPinnedReceiver"
+            android:exported="false" />
 
         <!--
           弹窗清理服务。

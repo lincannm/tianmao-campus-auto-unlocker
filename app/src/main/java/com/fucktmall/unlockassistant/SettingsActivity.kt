@@ -1,5 +1,6 @@
 package com.fucktmall.unlockassistant
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -51,6 +52,10 @@ class SettingsActivity : ComponentActivity() {
                             // 重走一遍向导：就地切过去，不用回桌面。
                             AppState.setOnboarded(this, false)
                             wizardMode = true
+                        },
+                        onOpenWidgetPin = {
+                            // 去独立整页：那里才有地方讲清权限与手动添加的办法。
+                            startActivity(Intent(this, WidgetPinActivity::class.java))
                         }
                     )
                 }
