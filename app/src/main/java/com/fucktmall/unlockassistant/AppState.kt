@@ -1,5 +1,6 @@
 package com.fucktmall.unlockassistant
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
@@ -48,15 +49,20 @@ object AppState {
         prefs(ctx).edit().putBoolean(KEY_UNLOCK_ON_WIDGET, v).apply()
     }
 
-    /** 我们在系统无障碍列表里的那一项，格式与系统一致：`包名/服务类全名`。 */
-    fun selfA11yComponent(ctx: Context): String =
-        "${ctx.packageName}/${UnlockAccessibilityService::class.java.name}"
+    /** 我们在系统无障碍列表里的那一项。 */
+    fun selfA11yComponent(ctx: Context): ComponentName =
+        ComponentName(ctx.packageName, UnlockAccessibilityService::class.java.name)
 
     /**
      * 无障碍服务是否已开启。
      *
      * **唯一权威来源是系统设置** `Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES`，
      * 即「设置 → 无障碍」里开关的那一项。
+     *
+     * 这一项里每个服务是一段 `包名/类名` 文本，而**类名有两种合法写法**：全名 `包名.类名`
+     * 与短名 `.类名`（省略掉与包名相同的部分）。系统里存哪一种由写入方决定，同一个服务
+     * 换个写法字面就不相等 —— 所以必须解析成组件再比，**不许拿字符串逐字比**：
+     * 系统里存短名时会把自己判成「未开启」，于是拦下跳转、胶囊显示未开启。
      *
      * 不拿 `UnlockAccessibilityService.running` 兜底：真机上关掉服务后系统会把它从启用
      * 列表摘掉却不回调 `onUnbind`，那个标志会一直是 true —— 拿它当准就会在无障碍其实
@@ -72,8 +78,8 @@ object AppState {
         } catch (t: Throwable) {
             null
         } ?: return false
-        val needle = selfA11yComponent(ctx)
-        return raw.split(':').any { it.trim().equals(needle, ignoreCase = true) }
+        val self = selfA11yComponent(ctx)
+        return raw.split(':').any { ComponentName.unflattenFromString(it.trim()) == self }
     }
 
     /**
