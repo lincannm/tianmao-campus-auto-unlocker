@@ -77,23 +77,32 @@
     <string name="shz_state_ready">Shizuku 已就绪</string>
     <string name="shz_state_not_running">Shizuku 没在运行</string>
     <string name="shz_state_no_permission">还没允许「开锁」使用 Shizuku</string>
-    <string name="shz_hint_not_running">装好之后要在 Shizuku 里把服务启动起来（手机重启后也要再启动一次）；已经装过就点下面的「打开 Shizuku」。本页不检测装没装，按第 1 步的下载链接自行判断。</string>
+    <string name="shz_hint_not_running">装好之后要在 Shizuku 里把服务启动起来；已经装过就点下面的「打开 Shizuku」。本App 重启手机后也要再启动一次。</string>
     <string name="shz_hint_no_permission">点「去授权」，在 Shizuku 弹出的窗口里允许「开锁」使用它。</string>
     <string name="shz_btn_open">打开 Shizuku</string>
     <string name="shz_btn_grant">去授权</string>
-    <string name="shz_btn_enable">用 Shizuku 开启无障碍</string>
+    <!-- 这个按钮是「一条路」而不是一个偏好：点下去 = 立刻写一次 + 以后每次打开本App 都自检并写回。 -->
+    <string name="shz_btn_keep">用 Shizuku 保持无障碍开启</string>
+    <string name="shz_btn_keep_and_enable">用 Shizuku 开启无障碍并保持</string>
+    <string name="shz_keep_desc">点一下就会把无障碍开启，并且以后每次打开本App 都会自检、被关掉就写回来。想停掉就去这一页把上面的开关关掉。</string>
     <string name="shz_switch">用 Shizuku 保持无障碍开启</string>
     <string name="shz_switch_desc">打开后，每次打开本App 都会检查一遍：无障碍被关掉了就自己写回来。</string>
     <string name="shz_done">已用 Shizuku 把无障碍打开</string>
     <string name="shz_failed">Shizuku 没能打开无障碍，请去系统设置里手动打开</string>
     <string name="shz_download_failed">打不开浏览器 · 下载地址：github.com/thedjchi/Shizuku/releases</string>
 
+    <!-- 设置面板第二只胶囊：3.11 起，顶部的「无障碍已开启」旁边再说一句"它靠 Shizuku 自动维持"。 -->
+    <string name="set_auto_keep_on">无障碍自动维持中</string>
+    <string name="set_auto_keep_off">自动维持已关</string>
+    <string name="set_auto_keep_not_running">自动维持已开 · Shizuku 没在运行</string>
+    <string name="set_auto_keep_a11y_off">自动维持已开 · 无障碍未开启</string>
+
     <!-- 引导页：四步 + 视频教程 + 开发者模式路径图（图可点开全屏放大）。 -->
     <string name="shzg_steps_title">一共四步</string>
     <string name="shzg_step1">装 Shizuku：它是免费开源的小工具，点上面那个按钮下载（也可以先看下面的视频教程）。</string>
     <string name="shzg_step2">打开「开发者模式」：在手机的「设置」里进「关于手机」（有的系统叫「我的设备 → 全部参数」），连续点「版本号」7 次，提示「您已处于开发者模式」就成了 —— 各品牌的路径见下面那张图。</string>
     <string name="shzg_step3">启动 Shizuku 的服务：打开 Shizuku，照它页面上的提示做（要开一次「无线调试」，有的教程用电脑）。⚠️ 手机重启后要再启动一次。</string>
-    <string name="shzg_step4">回到本页：先「去授权」，再「用 Shizuku 开启无障碍」，最后把「用 Shizuku 保持无障碍开启」这个开关打开。</string>
+    <string name="shzg_step4">回到本页：先「去授权」，再点「用 Shizuku 开启无障碍并保持」—— 这一步会直接把无障碍打开，并且以后每次打开本App 都会自检、被关掉就写回来。</string>
     <string name="shzg_btn_download">下载 Shizuku（GitHub Releases）</string>
     <string name="shzg_video_title">视频教程（B 站）</string>
     <string name="shzg_video_body">【Shizuku保姆级激活教学，看完不会我吃】：从下载到启动服务，一步步演示。</string>

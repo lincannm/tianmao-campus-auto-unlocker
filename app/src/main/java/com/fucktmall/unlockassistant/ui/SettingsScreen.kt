@@ -34,8 +34,11 @@ import com.fucktmall.unlockassistant.FireResult
 import com.fucktmall.unlockassistant.MainActivity
 import com.fucktmall.unlockassistant.R
 import com.fucktmall.unlockassistant.Session
+import com.fucktmall.unlockassistant.ShizukuA11y
 import com.fucktmall.unlockassistant.UnlockAccessibilityService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 /**
  * 设置 / 控制面板（MD3，主题是红色）。
@@ -65,8 +68,21 @@ fun SettingsScreen(
         }
     }
 
+    // 每次进这一页先把 Shizuku 的能力探测预热一次（真起远端进程，所以放 IO）：
+    // 下面组合期读 state() 时命中的就是缓存，主线程不会被那次调用卡住。
+    LaunchedEffect(resumeTick) {
+        withContext(Dispatchers.IO) { ShizukuA11y.probeShellNow(force = true) }
+    }
+
     val a11yOn = remember(resumeTick, now) { AppState.isAccessibilityEnabled(ctx) }
     val serviceConnected = remember(resumeTick, now) { AppState.isServiceConnected() }
+    // Shizuku 那条保持机制现在到哪一步：开着没有 / 开了但 Shizuku 没在跑（或没授权）/ 正常维持中。
+    // state() 内部有 5 秒缓存，所以放在这个每秒重算的 remember 里也不会反复起远端进程。
+    val shizukuKeep = remember(resumeTick, now) { AppState.isShizukuKeep(ctx) }
+    val shizukuReady = remember(resumeTick, now) {
+        ShizukuA11y.state(ctx) == ShizukuA11y.State.READY
+    }
+    val autoKeepOk = shizukuKeep && shizukuReady && a11yOn
     val remainingMs = remember(resumeTick, now) { Session.remainingMs(ctx) }
     val logs = remember(resumeTick, now) { Session.snapshot() }
     // 两个「代按开锁」开关：界面上「打开 App」在前、「小部件」在后。
@@ -92,6 +108,22 @@ fun SettingsScreen(
                     okText = stringResource(R.string.set_a11y_on),
                     badText = stringResource(R.string.set_a11y_off)
                 )
+                // ⭐ 第二只胶囊只在用户开过「用 Shizuku 保持无障碍开启」之后才出现：
+                // 它回答的是「现在到底有没有人在替我维持无障碍」，没开过这条路的人不需要看到它。
+                if (shizukuKeep) {
+                    Spacer(Modifier.height(6.dp))
+                    StatusChip(
+                        ok = autoKeepOk,
+                        okText = stringResource(R.string.set_auto_keep_on),
+                        badText = stringResource(
+                            when {
+                                !shizukuReady -> R.string.set_auto_keep_not_running
+                                !a11yOn -> R.string.set_auto_keep_a11y_off
+                                else -> R.string.set_auto_keep_off
+                            }
+                        )
+                    )
+                }
                 // 设置里开着、服务却没连上：说明服务被系统杀了还没绑回来，
                 // 这时候弹窗也不会被点掉（区分「用户关了」和「系统杀了」两种失效）。
                 if (a11yOn && !serviceConnected) {

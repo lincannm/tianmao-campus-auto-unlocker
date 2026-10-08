@@ -5,8 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.lifecycle.lifecycleScope
 import com.fucktmall.unlockassistant.ui.ShizukuGuideScreen
 import com.fucktmall.unlockassistant.ui.UnlockTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Shizuku 引导页外壳（UI 在 [ShizukuGuideScreen]，Compose + Material 3）。
@@ -34,6 +37,11 @@ class ShizukuGuideActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // 这一页每次回到前台都重读一遍状态；顺手把判定的原始输入打进日志
+        // （只读，见 ShizukuA11y.logDiagnostics 的注释）。用户从授权框 / Shizuku 回来时，
+        // 日志里就有"当时到底查到了什么"。
+        // ⚠️ 必须在后台线程：诊断会起一个远端进程（最多等 4 秒），放主线程就是一次 ANR。
+        lifecycleScope.launch(Dispatchers.IO) { ShizukuA11y.logDiagnostics(this@ShizukuGuideActivity) }
         resumeTick.intValue++
     }
 }

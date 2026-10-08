@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -60,6 +61,14 @@ import rikka.shizuku.Shizuku
 /** 视频教程（用户给的 B 站短链，点「看视频教程」交给浏览器或 B 站 App）。 */
 private const val VIDEO_TUTORIAL_URL = "https://b23.tv/te46sh3"
 
+/**
+ * 按下那个「用 Shizuku …」按钮时写进日志的原文。
+ *
+ * 用常量而不是 `stringResource`：`Session.addLog` 在事件回调（非 composable 上下文）里调，
+ * 而日志文本从来也不是给用户看的界面文案。
+ */
+private const val KEEP_ON_LOG = "用 Shizuku 保持无障碍开启 = true"
+
 /** 路径图插图的宽高比（源图 1448×1086，由 `tools/make_devmode_guide_image.py` 产出）。 */
 private const val DEVMODE_IMAGE_RATIO = 1448f / 1086f
 
@@ -90,6 +99,12 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
 
     // 本页自己的刷新计数：授权回来、刚写回一次、从 Shizuku / 系统设置回来，都要重读一遍。
     var tick by remember { mutableIntStateOf(0) }
+
+    // 先把能力探测在 IO 线程预热一次（真起远端进程），下面组合期读状态时命中的就是缓存。
+    LaunchedEffect(resumeTick, tick) {
+        withContext(Dispatchers.IO) { ShizukuA11y.probeShellNow(force = true) }
+    }
+
     val state = rememberShizukuStatus(ctx, resumeTick, tick)
     val a11yOn = remember(resumeTick, tick) { AppState.isAccessibilityEnabled(ctx) }
     var keep by remember(resumeTick, tick) { mutableStateOf(AppState.isShizukuKeep(ctx)) }
@@ -105,6 +120,31 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
                 Toast.LENGTH_LONG
             ).show()
             tick++
+        }
+    }
+
+    /**
+     * 那个「用 Shizuku …」按钮只有一个动作：**把这条保持机制打开，并且立刻写一次**。
+     * 所以它不叫"开关"—— 点下去就有实际效果；不想再保持时用这一页的开关关掉。
+     *
+     * 服务没在跑 / 还没授权时也点它：先探一次实情，再按结果去弹授权框或提示，
+     * 免得用户以为"这个按钮坏了"。
+     */
+    val runKeep: () -> Unit = {
+        keep = true
+        AppState.setShizukuKeep(ctx, true)
+        Session.addLog(KEEP_ON_LOG)
+        scope.launch {
+            val ready = withContext(Dispatchers.IO) { ShizukuA11y.probeShellNow() }.isEmpty()
+            if (!ready) {
+                // 探不通：Shizuku 自己的授权框只能在界面上弹；没授权时它就是要弹的那一步。
+                ShizukuA11y.requestPermission()
+                Toast.makeText(ctx, R.string.shz_failed, Toast.LENGTH_LONG).show()
+                tick++
+                return@launch
+            }
+            // 通了而且无障碍本来就没开：这次点击直接把无障碍打开。
+            if (!a11yOn) runEnable() else tick++
         }
     }
 
@@ -137,6 +177,12 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
                 )
                 Spacer(Modifier.height(10.dp))
 
+                // 那个「用 Shizuku …」按钮的文案跟着无障碍的真实状态走：
+                // 无障碍没开时它要连"开启"一起包办，所以文案要说全。
+                val keepBtnText = stringResource(
+                    if (a11yOn) R.string.shz_btn_keep else R.string.shz_btn_keep_and_enable
+                )
+
                 when (state) {
                     ShizukuA11y.State.NOT_RUNNING -> {
                         HintText(stringResource(R.string.shz_hint_not_running))
@@ -145,6 +191,8 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
                             text = stringResource(R.string.shz_btn_open),
                             modifier = Modifier.fillMaxWidth()
                         ) { ShizukuA11y.openShizuku(ctx) }
+                        Spacer(Modifier.height(10.dp))
+                        PrimaryButton(text = keepBtnText, onClick = runKeep)
                     }
 
                     ShizukuA11y.State.NO_PERMISSION -> {
@@ -153,16 +201,14 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
                         PrimaryButton(text = stringResource(R.string.shz_btn_grant)) {
                             ShizukuA11y.requestPermission()
                         }
+                        Spacer(Modifier.height(10.dp))
+                        PrimaryButton(text = keepBtnText, onClick = runKeep)
                     }
 
                     ShizukuA11y.State.READY -> {
-                        // 无障碍本来就开着时不给这个按钮：没有东西要写。
-                        if (!a11yOn) {
-                            PrimaryButton(
-                                text = stringResource(R.string.shz_btn_enable),
-                                onClick = runEnable
-                            )
-                        }
+                        PrimaryButton(text = keepBtnText, onClick = runKeep)
+                        Spacer(Modifier.height(6.dp))
+                        HintText(stringResource(R.string.shz_keep_desc))
                     }
                 }
 
@@ -172,9 +218,9 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
                 // 免得 Shizuku 哪天被卸载后这一页变成死胡同。
                 Spacer(Modifier.height(12.dp))
 
-                // 开关在「已就绪」或「用户此前打开过它」时都显示：Shizuku 挂了（重启后没启动服务）
-                // 也要让用户能把它关掉 —— 否则那个偏好就成了关不掉的隐形状态。
-                if (state == ShizukuA11y.State.READY || keep) {
+                // 关掉这条保持机制的唯一入口（上面那个按钮只会开启它）。
+                // Shizuku 挂了（重启后没启动服务）时也要能关 —— 否则那个偏好就成了关不掉的隐形状态。
+                if (keep) {
                     SwitchRow(
                         text = stringResource(R.string.shz_switch),
                         checked = keep,
@@ -182,8 +228,6 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
                             keep = v
                             AppState.setShizukuKeep(ctx, v)
                             Session.addLog("用 Shizuku 保持无障碍开启 = $v")
-                            // 打开开关时无障碍正好是关的：顺手写一次，别让用户再点一下按钮。
-                            if (v && !a11yOn) runEnable()
                         }
                     )
                     HintText(stringResource(R.string.shz_switch_desc))

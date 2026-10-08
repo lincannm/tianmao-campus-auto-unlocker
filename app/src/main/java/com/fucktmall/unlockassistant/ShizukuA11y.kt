@@ -56,24 +56,115 @@ object ShizukuA11y {
      * 当前状态。**刻意不判断「Shizuku 装没装」**：
      * Android 11+ 的包可见性让「查不到」和「没装」分不开，而各家发行版的包名又不一致，
      * 一旦查不到就会把**已经装了**的人引到「先去装一个」，比不判断更糟。
-     * 所以只问 binder（服务在不在跑，与包名无关）+ 授权，装没装由用户自己看引导页第 1 步。
+     * 所以只问 binder 与能力，装没装由用户自己看引导页第 1 步。
+     *
+     * ⚠️ **`Shizuku.checkSelfPermission()` 只在"能力探测失败"之后才作数**，这是刻意的：
+     * 它是个把异常也吞成"没授权"的布尔，实测出现过"系统里已授权、它也返回 DENIED"的假阴性
+     * （那会把已经能用的人钉在「还没允许」那一态）。真正的判据是**能不能以 shell 身份跑一条命令**；
+     * 只有跑不动时才回去问权限，用来分辨「没授权」和「服务不在」。
+     *
+     * 探测走 [probeShellNow] 的缓存（5 秒），所以这个函数可以每秒被界面调用；
+     * 冷启动那一次请先在 IO 线程预热缓存（见 [logDiagnostics]）。
      */
     fun state(ctx: Context): State = when {
         !binderAlive() -> State.NOT_RUNNING
-        !hasPermission() -> State.NO_PERMISSION
-        else -> State.READY
+        probeShellNow().isEmpty() -> State.READY
+        hasPermission() -> State.NOT_RUNNING
+        else -> State.NO_PERMISSION
     }
+
+    /** 用户允许「开锁」用 Shizuku 了吗（只用来给失败分因，见 [state]）。 */
+    private fun hasPermission(): Boolean = readCheckSelfPermission().first == true
+
+    /**
+     * `Shizuku.checkSelfPermission()` 的原值：第一项是 GRANTED/DENIED，第二项是异常文本。
+     * **单独留一份**，因为抛异常与"没授权"在这一页上长得一样，诊断日志要能把两者分开。
+     */
+    private fun readCheckSelfPermission(): Pair<Boolean?, String> = try {
+        (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) to ""
+    } catch (t: Throwable) {
+        null to (t.javaClass.simpleName + ": " + t.message)
+    }
+
+    /**
+     * 探测用的那一条命令：`id -u` 是 toybox 自带、只读、任何权限下都能跑，退出码 0 即"通了"。
+     * 用它而不是查权限，是因为**"能不能跑"才是这条路真正需要的事实**。
+     */
+    private val PROBE_CMD = arrayOf("/system/bin/id", "-u")
+
+    /** 探测结果（**内存缓存**，不落盘）：`""` = 通，非空 = 上次的失败原因。 */
+    @Volatile
+    private var probeError = ""
+
+    /** 上次探测的 `System.currentTimeMillis()`；`0` = 本次进程里还没探过。 */
+    @Volatile
+    private var probeAt = 0L
+
+    /**
+     * 界面上每秒都会问一次状态，而探测要起一个远端进程 —— 所以结果缓存 [PROBE_TTL_MS]。
+     *
+     * ⚠️ **首次调用是真跑**（可能阻塞几秒），所以界面上不要在组合 / 主线程里"第一次"探它：
+     * 页面 `onResume` 时先在 IO 线程调一次 [logDiagnostics]（它内部强制探）把缓存预热，
+     * 之后组合期读到的都是缓存。超时也从 [PROBE_TIMEOUT_MS] 收到 1.5 秒，免得真卡住时拖太久。
+     *
+     * @param force 忽略缓存重探一次（用户按下按钮、页面刚回来时用）。
+     * @return 失败原因（空串 = 通）。
+     */
+    fun probeShellNow(force: Boolean = false): String {
+        val now = System.currentTimeMillis()
+        if (!force && probeAt != 0L && now - probeAt < PROBE_TTL_MS) return probeError
+        val r = runAsShell(PROBE_CMD, PROBE_TIMEOUT_MS)
+        probeError = if (r.ok) {
+            ""
+        } else {
+            "exit=${r.exitCode}${if (r.stderr.isNotBlank()) " " + r.stderr else ""}"
+        }
+        probeAt = now
+        return probeError
+    }
+
+    /** 探测命令的超时：它只是起个进程，超了就按"不通"算。 */
+    private const val PROBE_TIMEOUT_MS = 1500L
+
+    /** 探测结果的新鲜期。 */
+    private const val PROBE_TTL_MS = 5000L
+
+    /**
+     * 把判定的原始输入打进日志（tag `UnlockAssistant`）。**会在 IO 线程起一次远端探测**，
+     * 调用方负责放到后台线程。
+     *
+     * **为什么要留着**：`Shizuku.checkSelfPermission()` 是个全捕获的布尔，
+     * "抛异常"与"没授权"在界面上长得一模一样；而且它和"实际能不能跑命令"会不一致。
+     * 这三项只有都打出来才分得清是哪一种。只读，不改任何状态。
+     */
+    fun logDiagnostics(ctx: Context) {
+        val probe = probeShellNow(force = true)
+        val (self, selfErr) = readCheckSelfPermission()
+        val selfAnswer = when {
+            self == true -> "GRANTED"
+            self == false -> "DENIED"
+            else -> "抛 $selfErr"
+        }
+        val ctxAnswer = runCatching {
+            val r = androidx.core.content.ContextCompat.checkSelfPermission(ctx, PERMISSION_API_V23)
+            if (r == PackageManager.PERMISSION_GRANTED) "GRANTED" else "DENIED($r)"
+        }.getOrElse { "抛 " + it.javaClass.simpleName + ": " + it.message }
+        val uid = runCatching { Shizuku.getUid().toString() }.getOrElse { "抛 " + it.javaClass.simpleName }
+        val ver = runCatching { Shizuku.getVersion().toString() }.getOrElse { "抛 " + it.javaClass.simpleName }
+        Session.addLog(
+            "Shizuku 诊断：pingBinder=${binderAlive()} " +
+                "远端跑命令=${if (probe.isEmpty()) "通" else "不通($probe)"} " +
+                "checkSelfPermission=$selfAnswer ContextCompat(本进程)=$ctxAnswer " +
+                "getUid=$uid 远端版本=$ver 本App uid=${ctx.applicationInfo.uid} 状态=${state(ctx)}"
+        )
+    }
+
+    /** 授权用的权限名（Shizuku 的 provider 声明它，管理器按它授权给调用方）。 */
+    private const val PERMISSION_API_V23 = "moe.shizuku.manager.permission.API_V23"
 
     /** binder 到了没有 = Shizuku 服务在不在跑（它在非 root 机上重启手机后要重新启动一次）。 */
     fun binderAlive(): Boolean = try {
         Shizuku.pingBinder()
-    } catch (t: Throwable) {
-        false
-    }
-
-    /** 用户允许「开锁」用 Shizuku 了吗。 */
-    fun hasPermission(): Boolean = try {
-        Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
     } catch (t: Throwable) {
         false
     }
@@ -173,10 +264,19 @@ object ShizukuA11y {
     }
 
     private fun settingsPut(ctx: Context, key: String, value: String, timeoutMs: Long): Boolean {
-        val ok = runAsShell(arrayOf(SETTINGS_BIN, "put", "secure", key, value), timeoutMs)
-        Session.addLog(if (ok) "用 Shizuku 写回系统设置：$key" else "用 Shizuku 写 $key 失败")
-        return ok
+        val r = runAsShell(arrayOf(SETTINGS_BIN, "put", "secure", key, value), timeoutMs)
+        Session.addLog(
+            if (r.ok) {
+                "用 Shizuku 写回系统设置：$key${if (r.stderr.isBlank()) "" else "（stderr：${r.stderr}）"}"
+            } else {
+                "用 Shizuku 写 $key 失败（exit=${r.exitCode}）：${r.stderr}"
+            }
+        )
+        return r.ok
     }
+
+    /** 一条远端命令的结果：`ok` 只看退出码；`stderr` 留着给日志（失败时就是失败原因）。 */
+    class ShellResult(val ok: Boolean, val exitCode: Int, val stderr: String)
 
     /**
      * 让 Shizuku 以 shell 身份执行一条命令（远端进程，参数按数组传，不经过 shell 解析，
@@ -184,10 +284,10 @@ object ShizukuA11y {
      *
      * ⚠️ `Shizuku.newProcess` 在 api 13.1.5 里是 **private**（`javap` 核过），
      * 官方注释写着「计划在 API 14 移除」，所以只能反射调用；一旦哪天真没了，
-     * 反射会抛异常 → 返回 false → 退回到「让用户自己去系统设置里打开」，
+     * 反射会抛异常 → 返回失败 → 退回到「让用户自己去系统设置里打开」，
      * 不会静默地假装成功。
      */
-    private fun runAsShell(cmd: Array<String>, timeoutMs: Long): Boolean {
+    private fun runAsShell(cmd: Array<String>, timeoutMs: Long): ShellResult {
         return try {
             val method = Shizuku::class.java.getDeclaredMethod(
                 "newProcess",
@@ -196,23 +296,22 @@ object ShizukuA11y {
                 String::class.java
             )
             method.isAccessible = true
-            val proc = method.invoke(null, cmd, null, null) as? ShizukuRemoteProcess ?: return false
+            val proc = method.invoke(null, cmd, null, null) as? ShizukuRemoteProcess
+                ?: return ShellResult(false, -1, "newProcess 返回 null")
 
             val finished = proc.waitForTimeout(timeoutMs, TimeUnit.MILLISECONDS)
             val code = if (finished) proc.exitValue() else -1
-            if (code != 0) {
-                val err = try {
-                    proc.errorStream.bufferedReader().readText().trim().take(120)
-                } catch (t: Throwable) {
-                    ""
-                }
-                Session.addLog("Shizuku 执行失败（exit=$code）：$err")
+            val err = try {
+                proc.errorStream.bufferedReader().readText().trim().take(160)
+            } catch (t: Throwable) {
+                ""
             }
             proc.destroy()
-            code == 0
+            // 超时（code = -1）时 stderr 把原因说清楚，别让它看起来像"命令返回了 -1"。
+            val text = if (!finished && err.isBlank()) "等待超时（${timeoutMs}ms）" else err
+            ShellResult(code == 0, code, text)
         } catch (t: Throwable) {
-            Session.addLog("Shizuku 执行异常：${t.message}")
-            false
+            ShellResult(false, -1, t.javaClass.simpleName + ": " + t.message)
         }
     }
 }
