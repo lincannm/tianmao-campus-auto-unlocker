@@ -89,6 +89,7 @@ fun WizardScreen(
                 TroubleshootCard(
                     title = stringResource(R.string.wiz_s1_tb_title),
                     collapsedHint = stringResource(R.string.wiz_s1_tb_collapsed),
+                    imageDesc = stringResource(R.string.wiz_s1_tb_img_desc),
                     body = stringResource(R.string.wiz_s1_tb_body),
                     steps = listOf(
                         stringResource(R.string.wiz_s1_tb_1),

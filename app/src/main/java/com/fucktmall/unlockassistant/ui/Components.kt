@@ -1,5 +1,6 @@
 package com.fucktmall.unlockassistant.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -48,6 +50,17 @@ import com.fucktmall.unlockassistant.R
 /** 界面零件，按 Material Design 3 写：MD3 字号/行高、40dp+ 全圆角按钮、
  *  surfaceContainerLow 卡片、AlertDialog 对话框。
  *  边到边 inset 交给 [Screen] 的 `windowInsetsPadding(WindowInsets.safeDrawing)`；主题色见 [UnlockTheme]。 */
+
+/**
+ * [TroubleshootCard] 那张插图的尺寸：**宽度写死 156dp**，高度按 [TROUBLE_IMAGE_RATIO] 推。
+ *
+ * 为什么压这么小：要让收起的卡尽量短（这张图在折叠时也显示），156dp 时高约 107dp，
+ * 图里的标题与那行蓝字仍看得清。**比例给死**是为了不让 `painter` 自己去"适配"
+ * （同 [AboutScreen] 里三张插图踩过的坑）。
+ * 图本身由 `tools/make_a11y_denied_image.py` 裁好缩好放进 `drawable-nodpi/`，产物 480×329。
+ */
+private val TROUBLE_IMAGE_WIDTH = 156.dp
+private const val TROUBLE_IMAGE_RATIO = 480f / 329f
 
 @Composable
 fun Screen(content: @Composable ColumnScope.() -> Unit) {
@@ -250,7 +263,11 @@ fun StepsCard(
 
 /**
  * 可折叠的排查卡：讲「照正常步骤做却被系统拦住了」时怎么办。结构与 [StepsCard] 相同（标题 + 一句正文 + 编号清单 + 一句小字），
- * 但**默认只露标题**，整张卡可点着展开 / 收起（展开状态由调用方持有，见 [WizardScreen]）。
+ * 但**默认只露标题 + 插图**，整张卡可点着展开 / 收起（展开状态由调用方持有，见 [WizardScreen]）。
+ *
+ * ⭐ **插图放在标题下面、折叠时也照常显示**：只写文字时，用户得先在脑子里把"我看到的那个弹窗"和卡上的
+ * 描述对上号才敢展开；把截图放在标题下，认不认得出一眼就知道，所以它比正文更该常驻。
+ * 代价是收起的卡也有一张图的高度，这也是把图压到 156dp 的原因。
  *
  * 用 `tertiaryContainer`（暖琥珀金）而不是 `primaryContainer`：向导里这张卡是**另一个问题**的答案，
  * 与那张「怎么开启」的正常步骤卡必须一眼分得开 —— 两张同色的话，用户会把排查步骤当成正常步骤接着做。
@@ -272,6 +289,7 @@ fun TroubleshootCard(
     expanded: Boolean,
     onToggle: () -> Unit,
     collapsedHint: String,
+    imageDesc: String,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -301,8 +319,20 @@ fun TroubleshootCard(
                 )
             }
 
+            Spacer(Modifier.height(10.dp))
+            Image(
+                painter = painterResource(R.drawable.il_a11y_denied),
+                // 截图里就是弹窗原文，读屏用户听这一句就够，不用把图里的字再念一遍。
+                contentDescription = imageDesc,
+                modifier = Modifier
+                    .width(TROUBLE_IMAGE_WIDTH)
+                    .height(TROUBLE_IMAGE_WIDTH / TROUBLE_IMAGE_RATIO)
+                    // 截图自带圆角，再裁一道把裁切框那点边也切干净。
+                    .clip(RoundedCornerShape(14.dp))
+            )
+
             if (!expanded) {
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(10.dp))
                 Text(
                     text = collapsedHint,
                     fontSize = 13.sp,
