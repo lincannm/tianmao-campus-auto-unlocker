@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.fucktmall.unlockassistant.ui.A11yOffDialog
 import com.fucktmall.unlockassistant.ui.NoTmallDialog
 import com.fucktmall.unlockassistant.ui.Screen
+import com.fucktmall.unlockassistant.ui.ShizukuOffDialog
 import com.fucktmall.unlockassistant.ui.UnlockTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -216,6 +217,8 @@ private fun EntryFlow(resumeTick: Int, fromWidget: Boolean, onExit: () -> Unit) 
     var fired by remember { mutableStateOf(false) }
     var a11yPrompt by remember { mutableStateOf(false) }
     var noTmall by remember { mutableStateOf(false) }
+    // Shizuku 该在跑却没在跑（只在补写真的失败时置位，见下面的判定）。
+    var shizukuOff by remember { mutableStateOf(false) }
 
     // 两条入口的代按开关相互独立：图标默认关、小部件默认开。
     val source = if (fromWidget) "小部件" else "自动跳转"
@@ -227,12 +230,18 @@ private fun EntryFlow(resumeTick: Int, fromWidget: Boolean, onExit: () -> Unit) 
         // ⭐ 无障碍被系统清掉时先补回来。
         // 两种情况都值得试：①用户开过这条保持机制；②本App 自己已经持有写系统设置的权限
         // （那种情况下这次写**完全不经过 Shizuku**，所以不要求 Shizuku 在跑）。
-        // 写不成功 / 两条路都不通，就什么都不做 —— 下面照旧拦下并弹 [A11yOffDialog]。
+        // 补不回来时照旧拦下并弹 [A11yOffDialog]；**如果原因是 Shizuku 没在运行**（而用户确实开过这条路），
+        // 再加一句当面提示 + 一个启动入口，别让"没启动服务"看起来像本App 坏了。
         if (!AppState.isAccessibilityEnabled(ctx) &&
             (AppState.isShizukuKeep(ctx) || ShizukuA11y.hasWriteSecureSettings(ctx))
         ) {
-            withContext(Dispatchers.IO) {
+            val ok = withContext(Dispatchers.IO) {
                 ShizukuA11y.ensureEnabled(ctx, SHIZUKU_WRITE_TIMEOUT_MS)
+            }
+            if (!ok && !ShizukuA11y.hasWriteSecureSettings(ctx) &&
+                ShizukuA11y.state(ctx) == ShizukuA11y.State.NOT_RUNNING
+            ) {
+                shizukuOff = true
             }
         }
 
@@ -276,6 +285,17 @@ private fun EntryFlow(resumeTick: Int, fromWidget: Boolean, onExit: () -> Unit) 
                 noTmall = false
                 onExit()
             }
+        )
+    }
+
+    // Shizuku 没在运行：先给弹窗（可以顺手把它的 App 拉起来），再落到无障碍那个提示上。
+    if (shizukuOff) {
+        ShizukuOffDialog(
+            onOpenShizuku = {
+                shizukuOff = false
+                ShizukuA11y.openShizuku(ctx)
+            },
+            onDismiss = { shizukuOff = false }
         )
     }
 }

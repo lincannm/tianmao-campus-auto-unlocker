@@ -110,6 +110,8 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
     var keep by remember(resumeTick, tick) { mutableStateOf(AppState.isShizukuKeep(ctx)) }
     var canWrite by remember(resumeTick, tick) { mutableStateOf(ShizukuA11y.hasWriteSecureSettings(ctx)) }
     var zoomOpen by remember { mutableStateOf(false) }
+    // Shizuku 服务没在运行时弹一次（用户要求：不要只给一行小字，要当面给个启动入口）。
+    var shizukuOffDialog by remember { mutableStateOf(false) }
 
     // 「写一次并反馈结果」：状态卡里的按钮与开关都用它，行为只写一份。
     val runEnable: () -> Unit = {
@@ -125,8 +127,15 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
     }
 
     // 一次性授权：让 Shizuku 替本App 授 WRITE_SECURE_SETTINGS，之后写回不再依赖 Shizuku 在跑。
+    // 服务没在运行时**不静默失败**，而是弹窗让用户去把它启动起来。
     val runGrant: () -> Unit = {
         scope.launch {
+            val probeError = withContext(Dispatchers.IO) { ShizukuA11y.probeShellNow(force = true) }
+            if (probeError.isNotEmpty()) {
+                shizukuOffDialog = true
+                tick++
+                return@launch
+            }
             val ok = withContext(Dispatchers.IO) { ShizukuA11y.grantWriteSecureSettings(ctx) }
             Toast.makeText(
                 ctx,
@@ -149,12 +158,16 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
         AppState.setShizukuKeep(ctx, true)
         Session.addLog(KEEP_ON_LOG)
         scope.launch {
-            val ready = withContext(Dispatchers.IO) { ShizukuA11y.probeShellNow() }.isEmpty()
+            val ready = withContext(Dispatchers.IO) { ShizukuA11y.probeShellNow(force = true) }.isEmpty()
             if (!ready) {
-                // 探不通：Shizuku 自己的授权框只能在界面上弹；没授权时它就是要弹的那一步。
-                ShizukuA11y.requestPermission()
-                Toast.makeText(ctx, R.string.shz_failed, Toast.LENGTH_LONG).show()
+                // 探不通有两种：服务没在跑（要用户去启动）或本App 还没被授权（要弹授权框）。
+                // 前者**当面弹窗**，别只给一行小字（用户明确要求）。
                 tick++
+                if (ShizukuA11y.state(ctx) == ShizukuA11y.State.NO_PERMISSION) {
+                    ShizukuA11y.requestPermission()
+                } else {
+                    shizukuOffDialog = true
+                }
                 return@launch
             }
             // 通了而且无障碍本来就没开：这次点击直接把无障碍打开。
@@ -222,10 +235,11 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
                     ShizukuA11y.State.NOT_RUNNING -> {
                         HintText(stringResource(R.string.shz_hint_not_running))
                         Spacer(Modifier.height(10.dp))
+                        // 拉 Shizuku 之前先弹窗说清楚（用户要求：没启动就弹窗给我点）。
                         OutlinedActionButton(
                             text = stringResource(R.string.shz_btn_open),
                             modifier = Modifier.fillMaxWidth()
-                        ) { ShizukuA11y.openShizuku(ctx) }
+                        ) { shizukuOffDialog = true }
                         Spacer(Modifier.height(10.dp))
                         PrimaryButton(text = keepBtnText, onClick = runKeep)
                     }
@@ -331,6 +345,18 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
             HintText(stringResource(R.string.shzg_no_shizuku))
             Spacer(Modifier.height(20.dp))
         }
+    }
+
+    if (shizukuOffDialog) {
+        ShizukuOffDialog(
+            onOpenShizuku = {
+                shizukuOffDialog = false
+                if (!ShizukuA11y.openShizuku(ctx)) {
+                    Toast.makeText(ctx, R.string.shz_download_failed, Toast.LENGTH_LONG).show()
+                }
+            },
+            onDismiss = { shizukuOffDialog = false }
+        )
     }
 
     if (zoomOpen) {

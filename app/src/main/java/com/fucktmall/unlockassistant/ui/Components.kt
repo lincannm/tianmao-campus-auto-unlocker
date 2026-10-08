@@ -548,6 +548,38 @@ fun A11yOffDialog(
     )
 }
 
+/**
+ * Shizuku 服务没在运行时的提示。
+ *
+ * 存在的理由：非 root 手机上 Shizuku 的服务**每次开机/停止后都要重新启动一次**，
+ * 而"没启动"这个状态光看页面上的小字很容易被忽略 —— 用户会以为本App 坏在别处。
+ * 所以只要走到需要它的那一步（点授权按钮 / 点开启并保持），就当面把话说清楚，
+ * 并给一个直接拉起 Shizuku 的按钮；想自己处理也留了「稍后」。
+ */
+@Composable
+fun ShizukuOffDialog(
+    onOpenShizuku: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dlg_shz_off_title)) },
+        text = {
+            Text(
+                text = stringResource(R.string.dlg_shz_off_body),
+                fontSize = 15.sp,
+                lineHeight = 24.sp
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onOpenShizuku) { Text(stringResource(R.string.dlg_shz_off_go)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dlg_shz_off_later)) }
+        }
+    )
+}
+
 /** 没装天猫校园时的提示。 */
 @Composable
 fun NoTmallDialog(onDismiss: () -> Unit) {
