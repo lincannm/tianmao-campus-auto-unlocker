@@ -109,20 +109,31 @@ fun SettingsScreen(
                     badText = stringResource(R.string.set_a11y_off)
                 )
                 // ⭐ 第二只胶囊只在用户开过「用 Shizuku 保持无障碍开启」之后才出现：
-                // 它回答的是「现在到底有没有人在替我维持无障碍」，没开过这条路的人不需要看到它。
+                // 它回答的是「**此刻**有没有人在替我维持无障碍」。
+                //
+                // 判"不达标"只有两种，因为这两种**当下确实维持不住**：
+                // ① Shizuku 服务没在跑 —— 强停之后就没人能替我们写回，直到用户重新启动它的服务；
+                // ② 无障碍没开 —— 此刻没东西可维持（下次打开本App 会自动开启，所以下面补一句提示）。
+                // ⚠️ 不做成"已开启"这种中性态：那只胶囊就只有 ok / 不 ok 两种样子（见 StatusChip），
+                //    而"这条机制开着"并不等于"现在受保护"。
                 if (shizukuKeep) {
                     Spacer(Modifier.height(6.dp))
                     StatusChip(
                         ok = autoKeepOk,
                         okText = stringResource(R.string.set_auto_keep_on),
                         badText = stringResource(
-                            when {
-                                !shizukuReady -> R.string.set_auto_keep_not_running
-                                !a11yOn -> R.string.set_auto_keep_a11y_off
-                                else -> R.string.set_auto_keep_off
+                            if (!shizukuReady) {
+                                R.string.set_auto_keep_not_running
+                            } else {
+                                R.string.set_auto_keep_a11y_off
                             }
                         )
                     )
+                    // 无障碍关着时把"接下来会自己好"说清楚，免得看起来像要用户去手动开。
+                    if (shizukuReady && !a11yOn) {
+                        Spacer(Modifier.height(6.dp))
+                        HintText(stringResource(R.string.set_auto_keep_armed))
+                    }
                 }
                 // 设置里开着、服务却没连上：说明服务被系统杀了还没绑回来，
                 // 这时候弹窗也不会被点掉（区分「用户关了」和「系统杀了」两种失效）。
