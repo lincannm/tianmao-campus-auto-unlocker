@@ -1,0 +1,11 @@
+<!-- Material 官方 expand_less（上拉箭头），与 ic_expand_more 成对：展开时用它表示"点一下能收回去"。
+     单色矢量，颜色由调用方 tint 决定，所以日夜通吃，不需要夜间版本。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M12,8l-6,6 1.41,1.41L12,10.83l4.59,4.58L18,14z" />
+</vector>

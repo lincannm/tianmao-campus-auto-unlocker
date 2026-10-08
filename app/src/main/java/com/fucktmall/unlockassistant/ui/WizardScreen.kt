@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -41,6 +42,10 @@ import com.fucktmall.unlockassistant.Session
  * 无障碍那一步自带开启教程（[StepsCard] 的带序号清单）。教程文案**必须跨品牌通用**：
  * 系统的无障碍页可能叫「无障碍」也可能叫「辅助功能」，服务列表可能叫「已下载的应用」
  * 也可能叫「已安装的服务」，两个名字都要写出来，不能只写某一个品牌的路径。
+ *
+ * 教程卡**上面**还有一张 [TroubleshootCard]（侧载 App 被系统拒绝授权的弹窗怎么处理）：
+ * 它讲的是"照教程做却被拦住"这种情况，所以与正常步骤分开、单独一张不同色的卡，
+ * 并且**默认折叠**（点标题展开）—— 碰到那个弹窗的人是少数，摊开会把「怎么开启」挤出首屏。
  */
 @Composable
 fun WizardScreen(
@@ -49,6 +54,9 @@ fun WizardScreen(
     onFinish: () -> Unit
 ) {
     var step by remember { mutableIntStateOf(0) }
+    // 排查卡默认收起（用户要求）；点标题展开。放手 remember 而不是卡片内部：换步时卡片会离开组合，
+    // 状态在这里才留得住，而且"默认折叠"这条只在这一处写。
+    var troubleOpen by remember { mutableStateOf(false) }
 
     // 最后一步的下标；「能不能往下走」= 无障碍开没开（见上方注释）。
     val lastStep = 1
@@ -75,8 +83,24 @@ fun WizardScreen(
                 }
             }
 
-            // 教程卡只挂在无障碍那一步：点「去开启」就离开本App，回来时靠它记着该点哪里。
+            // 排查卡挂在教程卡**上面**、默认折叠：它是"万一被拦住"的分支，碰到的人是少数，
+            // 摊开会把每个人都要走的「怎么开启」挤到屏幕下面。展开状态归这里持有，跨重组不丢。
             if (step == 0) {
+                TroubleshootCard(
+                    title = stringResource(R.string.wiz_s1_tb_title),
+                    collapsedHint = stringResource(R.string.wiz_s1_tb_collapsed),
+                    body = stringResource(R.string.wiz_s1_tb_body),
+                    steps = listOf(
+                        stringResource(R.string.wiz_s1_tb_1),
+                        stringResource(R.string.wiz_s1_tb_2),
+                        stringResource(R.string.wiz_s1_tb_3),
+                        stringResource(R.string.wiz_s1_tb_4)
+                    ),
+                    hint = stringResource(R.string.wiz_s1_tb_hint),
+                    expanded = troubleOpen,
+                    onToggle = { troubleOpen = !troubleOpen }
+                )
+
                 Spacer(Modifier.height(12.dp))
                 StepsCard(
                     title = stringResource(R.string.wiz_s1_tut_title),

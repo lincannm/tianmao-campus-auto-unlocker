@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.Color
  * ⚠️ 本主题里 `primaryContainer` 与 `errorContainer` 的值**是同一个** `#FFDAD6`
  * （同一套 MD3 红色调色板的 tone90），所以「已达成 / 未达成」两只状态胶囊必须一只用
  * `primaryContainer`、另一只改用实心 `error` —— 详见 [StatusChip]。
- * `tertiary`（暖琥珀金）留在色板里，当前没有界面元素在用。
+ * `tertiary`（暖琥珀金）只给 [TroubleshootCard] 用：向导里那张排查卡要跟正常步骤卡一眼分开。
  */
 
 private val LightColors = lightColorScheme(

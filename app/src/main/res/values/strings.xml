@@ -31,6 +31,23 @@
     <string name="wiz_s1_tut_4">系统会弹风险提示：勾选「我已知晓…」再点「确定」（小米系统要等倒计时走完）。</string>
     <string name="wiz_s1_tut_5">回到本页，上面的状态变成「✓ 无障碍已开启」就能继续了。</string>
 
+    <!--
+      排查卡：侧载（未知来源）App 想开无障碍时，部分系统会把开关拦下来并弹一个提示框。
+      用户给的截图里有两种写法：「已限制未知来源应用获取部分权限」与「已拒绝此应用获取敏感权限」，
+      所以卡里那句提示框原文用「敏感权限 / 部分权限」并列写法，**不写任何品牌名**。
+      真正的解法在**那个弹窗自己的蓝字链接**里（各家用词与路径都不一样），所以第 2 步只要求"点蓝字、照做"。
+      ⭐ 这张卡**默认折叠**（只露标题 + 一行「点开看怎么处理」）：碰到这个弹窗的人是少数，
+      摊开会把「怎么开启」挤下去。标题就点得开，箭头用来表示当前状态。
+    -->
+    <string name="wiz_s1_tb_title">被弹窗拦住了？</string>
+    <string name="wiz_s1_tb_collapsed">点开看怎么处理</string>
+    <string name="wiz_s1_tb_body">点开开关时，如果看到「未知来源应用…已限制获取敏感权限 / 部分权限」这类提示，说明系统把这条权限拦住了 —— 点弹窗里那行蓝色文字，照它写的做完，回来再打开一次开关就行。</string>
+    <string name="wiz_s1_tb_1">先把弹窗里那行蓝色文字（「查看如何解除限制」/「了解如何获取权限」）点开。</string>
+    <string name="wiz_s1_tb_2">弹窗自己会告诉你后面怎么点 —— 各品牌入口不一样，从上到下照着它写的做。</string>
+    <string name="wiz_s1_tb_3">做完回到这一步，再打开一次「开锁」的开关。</string>
+    <string name="wiz_s1_tb_4">还是打不开：进手机的「设置 → 应用管理 / 应用设置 → 开锁」翻一遍，有的系统这里有一项「允许受限制的设置」（或「解除限制」），打开它再回来试。</string>
+    <string name="wiz_s1_tb_hint">这条限制是系统对「从浏览器 / 文件管理装进来的 App」的保护，与 App 本身无关；各家提示文字与步骤都不一样。</string>
+
     <string name="wiz_need_a11y">还没开启无障碍，不能继续</string>
 
     <!--
@@ -129,7 +146,7 @@
     <string name="wpin_perm_step_2">进「权限管理」→「其他权限」，找到「桌面快捷方式」并允许。</string>
     <string name="wpin_perm_step_3">回到本页，点「添加到桌面」。</string>
     <string name="wpin_perm_btn">去授权</string>
-    <string name="wpin_perm_hint">没给这个权限，点「添加到桌面」不会有反应。有的手机没有这一项，那就跳过这步直接试。</string>
+    <string name="wpin_perm_hint">权限列表里有「桌面快捷方式」这一项就是必需的，必须允许；没有这一项的手机跳过这步，直接去添加。</string>
     <string name="wpin_perm_open_failed">打不开权限页，请自己进手机的「设置 → 应用管理 → 开锁 → 权限」</string>
     <string name="wpin_pick_title">选一个尺寸</string>
     <string name="wpin_add_btn">添加到桌面</string>

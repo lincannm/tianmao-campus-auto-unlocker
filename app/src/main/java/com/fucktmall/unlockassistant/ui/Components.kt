@@ -248,6 +248,118 @@ fun StepsCard(
     }
 }
 
+/**
+ * 可折叠的排查卡：讲「照正常步骤做却被系统拦住了」时怎么办。结构与 [StepsCard] 相同（标题 + 一句正文 + 编号清单 + 一句小字），
+ * 但**默认只露标题**，整张卡可点着展开 / 收起（展开状态由调用方持有，见 [WizardScreen]）。
+ *
+ * 用 `tertiaryContainer`（暖琥珀金）而不是 `primaryContainer`：向导里这张卡是**另一个问题**的答案，
+ * 与那张「怎么开启」的正常步骤卡必须一眼分得开 —— 两张同色的话，用户会把排查步骤当成正常步骤接着做。
+ * 主题里 `tertiary` 这支色只给这张卡用（见 [UnlockTheme]）。
+ *
+ * 折叠是内容量的取舍：这张卡跟全量步骤卡一样长，但**大多数用户根本不会碰到那个弹窗**；
+ * 直接摊开会把「怎么开启」挤到屏幕下面，反而挡住真正每个人都要走的那几步。
+ * 标题下面跟着一行「点开看怎么处理」—— 只给箭头的话要靠用户猜，而这行字本身就是"点这里"的提示。
+ *
+ * 正文里的让步：**只写"弹窗自己怎么说就怎么点"**。各品牌/各版本在这一处的入口名与路径都不一样，
+ * 把某一家（或某个 Android 版本的官方路径）写死会让其他机型的用户按错地方，所以这里不抄任何一条具体路径。
+ */
+@Composable
+fun TroubleshootCard(
+    title: String,
+    body: String,
+    steps: List<String>,
+    hint: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    collapsedHint: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        onClick = onToggle
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    modifier = Modifier.weight(1f),
+                    fontSize = 17.sp,
+                    lineHeight = 24.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+                Spacer(Modifier.width(8.dp))
+                // 箭头方向就是当前状态（收起时朝下 = 能往下展，展开时朝上 = 能收回去）。
+                Icon(
+                    painter = painterResource(
+                        if (expanded) R.drawable.ic_expand_less else R.drawable.ic_expand_more
+                    ),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+            }
+
+            if (!expanded) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = collapsedHint,
+                    fontSize = 13.sp,
+                    lineHeight = 20.sp,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+                return@Column
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = body,
+                fontSize = 15.sp,
+                lineHeight = 23.sp,
+                color = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+            Spacer(Modifier.height(12.dp))
+            steps.forEachIndexed { i, step ->
+                if (i > 0) Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.Top) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${i + 1}",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.tertiaryContainer
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = step,
+                        modifier = Modifier.weight(1f),
+                        fontSize = 16.sp,
+                        lineHeight = 26.sp,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = hint,
+                fontSize = 13.sp,
+                lineHeight = 20.sp,
+                color = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+        }
+    }
+}
+
 /** MD3 headlineSmall：一步的标题，一眼一个词。 */
 @Composable
 fun StepTitle(text: String) {
