@@ -20,8 +20,8 @@ android {
         // versionCode / versionName 只影响「关于」页显示和覆盖安装，跟行为无关。
         // ⚠️ 这两个值同时决定 CI 出包的 Release 名（tag = `v<versionName>`）：
         // 同名 Release 已存在时那条流水线会直接失败，所以每次要出包都得往上抬一格。
-        versionCode = 10
-        versionName = "3.8"
+        versionCode = 13
+        versionName = "3.11"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -78,6 +78,10 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.material3)
+    // Shizuku：唯一用途是「无障碍被系统清掉后，由它以 shell 身份把开关写回来」
+    // （ShizukuA11y.kt）。本App 自己不申请 WRITE_SECURE_SETTINGS。
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

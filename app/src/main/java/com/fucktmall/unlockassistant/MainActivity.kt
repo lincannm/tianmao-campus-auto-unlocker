@@ -21,7 +21,17 @@ import com.fucktmall.unlockassistant.ui.A11yOffDialog
 import com.fucktmall.unlockassistant.ui.NoTmallDialog
 import com.fucktmall.unlockassistant.ui.Screen
 import com.fucktmall.unlockassistant.ui.UnlockTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.net.URLEncoder
+
+/**
+ * 打开App 这条路上等 Shizuku 写回无障碍开关的上限。
+ *
+ * 开门是「现在就要用」，不能为了写一次设置把人晾在跳转前面；实测一次写入是百毫秒级，
+ * 这个值只是兜底（Shizuku 没在跑时 [ShizukuA11y.ensureEnabled] 会立刻返回，不会等）。
+ */
+private const val SHIZUKU_WRITE_TIMEOUT_MS = 1500L
 
 /**
  * 「抛 deep link」的结果。
@@ -196,6 +206,9 @@ class MainActivity : ComponentActivity() {
  * 「直接开门」的画面：无障碍没开就停在提示对话框上等用户选，天猫校园没装也只给一个提示。
  *
  * [resumeTick] 变化会重新判定一次：用户去开了无障碍再回来就**自动接着跳**，不用再点图标。
+ *
+ * 判定之前还有一步（只在用户开过「用 Shizuku 保持无障碍开启」时发生）：让 Shizuku 把被系统
+ * 清掉的无障碍写回来。它跑在 IO 线程、有超时，失败也不影响下面的判定。
  */
 @Composable
 private fun EntryFlow(resumeTick: Int, fromWidget: Boolean, onExit: () -> Unit) {
@@ -210,6 +223,15 @@ private fun EntryFlow(resumeTick: Int, fromWidget: Boolean, onExit: () -> Unit) 
 
     LaunchedEffect(resumeTick) {
         if (fired) return@LaunchedEffect
+
+        // ⭐ 无障碍被系统清掉、而用户开过「用 Shizuku 保持无障碍开启」时：先用 Shizuku 把它写回来，
+        // 用户就感觉不到被清过（force-stop 之后本App 没有别的机会补救，这是唯一的一处）。
+        // 写不成功 / Shizuku 不在，就什么都不做 —— 下面照旧拦下并弹 [A11yOffDialog]。
+        if (AppState.isShizukuKeep(ctx) && !AppState.isAccessibilityEnabled(ctx)) {
+            withContext(Dispatchers.IO) {
+                ShizukuA11y.ensureEnabled(ctx, SHIZUKU_WRITE_TIMEOUT_MS)
+            }
+        }
 
         when (MainActivity.tryFireUnlock(ctx, source, armUnlock = arm)) {
             FireResult.FIRED -> {

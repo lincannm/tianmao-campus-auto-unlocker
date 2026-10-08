@@ -11,13 +11,16 @@ import android.provider.Settings
  * 全局开关与状态判定。
  *
  * 持久化标志：onboarded（是否走完首次使用向导；没走完时打开App 只弹 toast 指路，
- * 见 [MainActivity.onCreate]）、unlock_on_app / unlock_on_widget（两个代按开关，见下）。
+ * 见 [MainActivity.onCreate]）、unlock_on_app / unlock_on_widget（两个代按开关，见下）、
+ * shizuku_keep（要不要用 Shizuku 把无障碍保持在开启状态，见下）。
  *
  * 「打开App 直接进开锁界面」固定常开；无障碍没开时不硬跳，先弹提示
  * （见 [MainActivity.tryFireUnlock]）。
  *
- * ⭐ 本App **只读**系统设置，不写：授权被清掉后不会自己写回，只能提示用户去系统无障碍
- * 列表手动打开。「划掉卡片」那条路径由服务声明 `feedbackAllMask` 挡住，不需要写回。
+ * ⭐ 无障碍被系统清掉后**不自己写回**：本App 对系统设置**只读**，授权没了只能提示用户去系统
+ * 无障碍列表手动打开（「划掉卡片」那条路径由服务声明 `feedbackAllMask` 挡住，根本不会被清）。
+ * **唯一的例外**是用户亲手打开的 [isShizukuKeep]：那时改由 **Shizuku 以 shell 身份**代写，
+ * 本App 自己不申请也不持有 `WRITE_SECURE_SETTINGS`（见 [ShizukuA11y]）。
  */
 object AppState {
 
@@ -25,6 +28,7 @@ object AppState {
     private const val KEY_ONBOARDED = "onboarded"
     private const val KEY_UNLOCK_ON_APP = "unlock_on_app"
     private const val KEY_UNLOCK_ON_WIDGET = "unlock_on_widget"
+    private const val KEY_SHIZUKU_KEEP = "shizuku_keep"
 
     fun prefs(ctx: Context): SharedPreferences =
         ctx.applicationContext.getSharedPreferences(PREF, Context.MODE_PRIVATE)
@@ -47,6 +51,19 @@ object AppState {
 
     fun setUnlockOnWidget(ctx: Context, v: Boolean) {
         prefs(ctx).edit().putBoolean(KEY_UNLOCK_ON_WIDGET, v).apply()
+    }
+
+    /**
+     * 「用 Shizuku 保持无障碍开启」：开着时，每次打开本App 会检查无障碍，
+     * 被系统关掉就让 Shizuku（shell 身份）把它写回来。
+     *
+     * **默认关** —— 关着的时候本App 对系统设置只读，与没装 Shizuku 时行为完全一致；
+     * 这一条是用户亲手打开的知情选择，也是 [ShizukuA11y] 唯一的触发前提。
+     */
+    fun isShizukuKeep(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_SHIZUKU_KEEP, false)
+
+    fun setShizukuKeep(ctx: Context, v: Boolean) {
+        prefs(ctx).edit().putBoolean(KEY_SHIZUKU_KEEP, v).apply()
     }
 
     /** 我们在系统无障碍列表里的那一项。 */

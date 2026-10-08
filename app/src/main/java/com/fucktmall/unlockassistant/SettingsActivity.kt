@@ -35,9 +35,15 @@ class SettingsActivity : ComponentActivity() {
 
         setContent {
             UnlockTheme {
+                // 两个模式共用同一个「Shizuku 引导页」入口：那一页假定读者没听说过 Shizuku，
+                // 说明书只写在那里一份。
+                val openShizukuGuide = {
+                    startActivity(Intent(this, ShizukuGuideActivity::class.java))
+                }
                 if (wizardMode) {
                     WizardHost(
                         resumeTick = resumeTick.intValue,
+                        onOpenShizukuGuide = openShizukuGuide,
                         onFinish = {
                             // 偏好已由 WizardHost 写完（onboarded=true）。
                             // 这里只退出：向导结束时不开天猫校园。
@@ -56,7 +62,8 @@ class SettingsActivity : ComponentActivity() {
                         onOpenWidgetPin = {
                             // 去独立整页：那里才有地方讲清权限与手动添加的办法。
                             startActivity(Intent(this, WidgetPinActivity::class.java))
-                        }
+                        },
+                        onOpenShizukuGuide = openShizukuGuide
                     )
                 }
             }

@@ -41,17 +41,18 @@ import kotlinx.coroutines.delay
  * 设置 / 控制面板（MD3，主题是红色）。
  * 入口是**长按桌面图标 → 设置**（静态快捷方式），以及 deep link 抛失败时的落地页。
  * 面板每秒刷一次：无障碍状态、自动跳过剩余时间、累计点掉的弹窗数、动作日志
- * （日志每行带 `HH:mm:ss` 时间戳，见 `Session.addLog`）。卡内底部是「了解本App」，
- * 跳转到独立整页 [AboutActivity]；小部件那张卡底部是「小组件添加至桌面」，
- * 跳转到独立整页 `WidgetPinActivity`（授桌面快捷方式权限 + 把小部件固定到桌面）。
- * 本App 对系统设置**只读**，不申请 `WRITE_SECURE_SETTINGS`。
+ * （日志每行带 `HH:mm:ss` 时间戳，见 `Session.addLog`）。第一张卡内底部是「了解本App」，
+ * 它**下面**是「通过Shizuku开启无障碍（推荐）」—— 跳到独立整页
+ * [com.fucktmall.unlockassistant.ShizukuGuideActivity]（向导第 1 步里是同一个按钮）；
+ * 小部件那张卡底部是「小组件添加至桌面」，跳转到独立整页 `WidgetPinActivity`。
  */
 @Composable
 fun SettingsScreen(
     resumeTick: Int,
     onOpenA11y: () -> Unit,
     onOpenWizard: () -> Unit,
-    onOpenWidgetPin: () -> Unit
+    onOpenWidgetPin: () -> Unit,
+    onOpenShizukuGuide: () -> Unit
 ) {
     val ctx = LocalContext.current
 
@@ -126,6 +127,16 @@ fun SettingsScreen(
                         fontWeight = FontWeight.Medium
                     )
                 }
+
+                // ⭐ 「了解本App」**下面**的第二个入口：Shizuku 那条路（可选增强）。
+                // 只放一个按钮、点进独立的引导页 —— 那里才有装 Shizuku / 开开发者模式 /
+                // 启动服务 / 授权 / 打开开关的完整说明与视频、路径图。
+                Spacer(Modifier.height(12.dp))
+                OutlinedActionButton(
+                    text = stringResource(R.string.shz_entry_btn),
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = onOpenShizukuGuide
+                )
             }
 
             Spacer(Modifier.height(12.dp))

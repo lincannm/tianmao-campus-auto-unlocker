@@ -3,10 +3,17 @@
 
     <!--
       包可见性：Android 11+ 默认看不到别的 App。
-      这里只声明我们要问的那一个包，比申请 QUERY_ALL_PACKAGES 干净得多。
+      这里只声明我们要问的那两个包，比申请 QUERY_ALL_PACKAGES 干净得多。
     -->
     <queries>
         <package android:name="com.tmall.campus.and" />
+        <!--
+          只服务一件事：「打开 Shizuku」按钮（ShizukuA11y.openShizuku 用
+          PackageManager.getLaunchIntentForPackage，没有这条声明在 Android 11+ 上必然返回 null）。
+          ⚠️ **本App 不检测 Shizuku 装没装**：查不准，会把已经装了的人引去「再装一个」。
+          `ShizukuA11y.state()` 只看 binder 与授权；这个按钮找不到启动入口时退回下载直链。
+        -->
+        <package android:name="moe.shizuku.privileged.api" />
     </queries>
 
     <!-- 向导第 2 步要直接申请「忽略电池优化」，避免服务被系统杀掉后无障碍掉线。 -->
@@ -17,16 +24,14 @@
       Android 规定**发起方的 App 自己**要有 INTERNET 才有资格 resolve/启动 http(s) 的
       ACTION_VIEW（否则 SecurityException），所以不加这条权限，那一下点击必然失败。
       本App **没有任何联网代码、没有网络库**，这条权限不会被用在别处；
-      「零特权、不联网」的定位不变（见 README 与 docs/20-core-mechanisms-and-invariants.md）。
+      「自己不申请特权权限、不联网」的定位不变。
     -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!--
-      ⭐ 3.0 起**不再**申请 WRITE_SECURE_SETTINGS（用户要求去掉「系统清掉授权自动恢复」）。
-      2.1 加它，是为了在授权被强停清掉后自己写回系统设置；2.2 已经用
-      `feedbackAllMask`（见 accessibility_service_config.xml）让「划掉卡片」不再强停本App，
-      用户又明确不要那个功能，所以申请、代码、面板开关一起删掉。
-      现在本App 对系统设置**只读不写**：少一条特权权限，也少一处可能抢用户开关的地方。
+      本App **不申请** `WRITE_SECURE_SETTINGS`：无障碍被系统清掉之后，
+      「写回开关」这件事由 Shizuku 以 shell 身份做（见 ShizukuA11y.kt），本App 自己只读系统设置。
+      用户没打开「用 Shizuku 保持无障碍开启」那个开关时，一行都不写。
     -->
 
     <application
@@ -95,6 +100,17 @@
             android:launchMode="singleTop" />
 
         <!--
+          Shizuku 引导页：向导第 1 步与设置面板里那个「通过Shizuku开启无障碍（推荐）」都跳到这。
+          exported=false：只有本App 自己会拉起它（这一页要放视频教程入口与一张可全屏放大的路径图，
+          所以是独立整页而不是弹窗）。
+        -->
+        <activity
+            android:name=".ShizukuGuideActivity"
+            android:exported="false"
+            android:label="@string/shzg_title"
+            android:launchMode="singleTop" />
+
+        <!--
           桌面小部件（3.1）：四张独立卡，1×1 / 2×1 / 2×2 / 4×2，每张放置后都能自由缩放。
           每个入口一个子类（同名 receiver 在清单里会被合并，没法用一个类挂四份 meta-data）。
           exported=false：小部件的更新广播由系统投递，外部 App 没有理由触发它
@@ -155,6 +171,22 @@
         <receiver
             android:name=".widget.WidgetPinnedReceiver"
             android:exported="false" />
+
+        <!--
+          Shizuku 的 binder 入口：进程启动时 Shizuku 通过它把 binder 交给我们，
+          没有它 `Shizuku` 类的每个方法都会抛 "binder haven't been received"。
+          `permission` 是**要求调用方持有**的权限（不是我们申请权限），
+          `authorities` 必须是 `<applicationId>.shizuku`，这两条都是 Shizuku 官方约定的写法。
+          provider 这个依赖还会往合并后的清单里注入 `moe.shizuku.manager.permission.API_V23`
+          （这条权限名属于 Shizuku 的 API 约定，与「管理器 App 的包名」是两回事，别拿它去推包名）。
+        -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
         <!--
           弹窗清理服务。

@@ -59,6 +59,52 @@
     -->
     <string name="wiz_s1_toast">往下拉，找「已下载的应用 / 已安装的服务」，打开「开锁」</string>
 
+    <!--
+      Shizuku（可选增强）：把被系统清掉的无障碍写回来。
+      ⭐ 向导第 1 步与设置面板**只放一个按钮**（`shz_entry_btn`），点进来才是这一整页引导
+      （`ui/ShizukuGuideScreen.kt`）—— 小白用户不该在两个页面里各读一段说明书。
+      四件事必须说清楚：①这条路是可选的，不装 Shizuku 走「去系统设置里开」那条老路；
+      ②**装没装不由本App 检测**（包可见性查不准），所以这一页永远给一个 GitHub Releases 的下载直链，
+      状态只看「服务在不在跑」；③Shizuku 服务在非 root 机上**重启手机后要重新启动一次**，
+      那之后本App 也写不了；④开发者模式怎么开各品牌不一样，所以附了一张可以点开放大的路径图 + 一个视频教程。
+      ⭐ 「由谁写」的措辞不许含糊：读设置、算该写什么、发起调用都是本App 做的，Shizuku 只出借
+      shell 身份跑那条 `settings put` 命令 —— 别写成「写这件事全交给 Shizuku」。
+    -->
+    <string name="shz_entry_btn">通过Shizuku开启无障碍（推荐）</string>
+    <string name="shzg_title">通过 Shizuku 开启无障碍</string>
+    <string name="shzg_lead">本App 靠无障碍自动跳过天猫校园的广告。有些手机在把本App 清理掉（强制停止）之后，会顺手把无障碍一起关掉，那时广告就不会自动跳过了。\n\n装了 Shizuku 之后，本App 每次打开时会自己把无障碍写回来：要写什么由本App 算（把我们自己那一项补进无障碍列表），Shizuku 只出借它的系统身份帮忙执行写回命令。本App 自己不申请任何特权权限，也一直没申请过。</string>
+    <string name="shzg_no_shizuku">不装 Shizuku 也能用：无障碍被关掉后，去手机的「设置 → 无障碍 / 辅助功能」里手动打开「开锁」即可。</string>
+    <string name="shz_state_ready">Shizuku 已就绪</string>
+    <string name="shz_state_not_running">Shizuku 没在运行</string>
+    <string name="shz_state_no_permission">还没允许「开锁」使用 Shizuku</string>
+    <string name="shz_hint_not_running">装好之后要在 Shizuku 里把服务启动起来（手机重启后也要再启动一次）；已经装过就点下面的「打开 Shizuku」。本页不检测装没装，按第 1 步的下载链接自行判断。</string>
+    <string name="shz_hint_no_permission">点「去授权」，在 Shizuku 弹出的窗口里允许「开锁」使用它。</string>
+    <string name="shz_btn_open">打开 Shizuku</string>
+    <string name="shz_btn_grant">去授权</string>
+    <string name="shz_btn_enable">用 Shizuku 开启无障碍</string>
+    <string name="shz_switch">用 Shizuku 保持无障碍开启</string>
+    <string name="shz_switch_desc">打开后，每次打开本App 都会检查一遍：无障碍被关掉了就自己写回来。</string>
+    <string name="shz_done">已用 Shizuku 把无障碍打开</string>
+    <string name="shz_failed">Shizuku 没能打开无障碍，请去系统设置里手动打开</string>
+    <string name="shz_download_failed">打不开浏览器 · 下载地址：github.com/thedjchi/Shizuku/releases</string>
+
+    <!-- 引导页：四步 + 视频教程 + 开发者模式路径图（图可点开全屏放大）。 -->
+    <string name="shzg_steps_title">一共四步</string>
+    <string name="shzg_step1">装 Shizuku：它是免费开源的小工具，点上面那个按钮下载（也可以先看下面的视频教程）。</string>
+    <string name="shzg_step2">打开「开发者模式」：在手机的「设置」里进「关于手机」（有的系统叫「我的设备 → 全部参数」），连续点「版本号」7 次，提示「您已处于开发者模式」就成了 —— 各品牌的路径见下面那张图。</string>
+    <string name="shzg_step3">启动 Shizuku 的服务：打开 Shizuku，照它页面上的提示做（要开一次「无线调试」，有的教程用电脑）。⚠️ 手机重启后要再启动一次。</string>
+    <string name="shzg_step4">回到本页：先「去授权」，再「用 Shizuku 开启无障碍」，最后把「用 Shizuku 保持无障碍开启」这个开关打开。</string>
+    <string name="shzg_btn_download">下载 Shizuku（GitHub Releases）</string>
+    <string name="shzg_video_title">视频教程（B 站）</string>
+    <string name="shzg_video_body">【Shizuku保姆级激活教学，看完不会我吃】：从下载到启动服务，一步步演示。</string>
+    <string name="shzg_video_btn">看视频教程</string>
+    <string name="shzg_video_failed">打不开浏览器 · 链接：b23.tv/te46sh3</string>
+    <string name="shzg_img_title">开发者模式开启路径图</string>
+    <string name="shzg_img_desc">一张「开发者模式开启路径导图」：华为/荣耀、小米/红米、OPPO/一加/真我、vivo/iQOO、魅族、联想/摩托罗拉各自的入口路径，以及要连续点击 7 次的位置；vivo/iQOO 另给了一条拨号盘快捷指令 *#*#7777#*#*。</string>
+    <string name="shzg_img_hint">点图片全屏放大（双指缩放 / 拖动 / 双击）</string>
+    <string name="shzg_zoom_hint">双指缩放 · 拖动查看 · 双击放大或还原</string>
+    <string name="shzg_zoom_close">关闭</string>
+
     <!-- 向导第 2 步「允许后台运行」的条目：现在**界面上没人用**，留着备用。 -->
     <string name="wiz_s2_title">允许后台运行</string>
     <string name="wiz_s2_body">系统省电时会杀掉本App。\n被杀了无障碍就失效，广告没法自动跳过。</string>

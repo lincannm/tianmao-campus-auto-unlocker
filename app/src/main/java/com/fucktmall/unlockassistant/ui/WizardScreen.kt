@@ -46,11 +46,17 @@ import com.fucktmall.unlockassistant.Session
  * 教程卡**上面**还有一张 [TroubleshootCard]（侧载 App 被系统拒绝授权的弹窗怎么处理）：
  * 它讲的是"照教程做却被拦住"这种情况，所以与正常步骤分开、单独一张不同色的卡，
  * 并且**默认折叠**（点标题展开）—— 碰到那个弹窗的人是少数，摊开会把「怎么开启」挤出首屏。
+ *
+ * 第 1 步「去开启」按钮**下面**还有一个按钮「通过Shizuku开启无障碍（推荐）」（`R.string.shz_entry_btn`）：
+ * 点了跳到独立的 [com.fucktmall.unlockassistant.ShizukuGuideActivity]。要用那条路的人得先装 Shizuku、
+ * 开「开发者模式」、启动它的服务 —— 这些步骤摊在向导里会把「怎么开启」挤出首屏，所以这里只留一个入口，
+ * 说明书全在那一页（设置面板里是同一个按钮，见 [SettingsScreen]）。
  */
 @Composable
 fun WizardScreen(
     a11yOn: Boolean,
     onOpenA11y: () -> Unit,
+    onOpenShizukuGuide: () -> Unit,
     onFinish: () -> Unit
 ) {
     var step by remember { mutableIntStateOf(0) }
@@ -78,7 +84,11 @@ fun WizardScreen(
         ) {
             StepCard {
                 when (step) {
-                    0 -> StepA11y(a11yOn = a11yOn, onOpenA11y = onOpenA11y)
+                    0 -> StepA11y(
+                        a11yOn = a11yOn,
+                        onOpenA11y = onOpenA11y,
+                        onOpenShizukuGuide = onOpenShizukuGuide
+                    )
                     else -> StepUsage()
                 }
             }
@@ -169,7 +179,11 @@ fun WizardScreen(
  * 「还没走完向导」时显示。[onFinish] 里**只退出，不打开天猫校园**。
  */
 @Composable
-fun WizardHost(resumeTick: Int, onFinish: () -> Unit) {
+fun WizardHost(
+    resumeTick: Int,
+    onOpenShizukuGuide: () -> Unit,
+    onFinish: () -> Unit
+) {
     val ctx = LocalContext.current
     val a11yOn = remember(resumeTick) { AppState.isAccessibilityEnabled(ctx) }
 
@@ -183,6 +197,7 @@ fun WizardHost(resumeTick: Int, onFinish: () -> Unit) {
             Toast.makeText(ctx, R.string.wiz_s1_toast, Toast.LENGTH_LONG).show()
             MainActivity.openAccessibilitySettings(ctx)
         },
+        onOpenShizukuGuide = onOpenShizukuGuide,
         onFinish = {
             AppState.setOnboarded(ctx, true)
             Session.addLog("初次使用向导完成：只退出，不打开天猫校园")
@@ -194,11 +209,19 @@ fun WizardHost(resumeTick: Int, onFinish: () -> Unit) {
 /**
  * 第 1 步：开启无障碍。
  *
- * 卡里只放「是什么 / 现在什么状态 / 按钮」，**具体怎么点放卡外的 [StepsCard]** ——
+ * 卡里只放「是什么 / 现在什么状态 / 两个按钮」，**具体怎么点放卡外的 [StepsCard]** ——
  * 点完按钮就跳去系统设置了，教程卡留在屏幕上（回来时还在），卡里塞满步骤反而没人读。
+ *
+ * 两个按钮是**两条并列的路**：上面那个去系统设置里手动开（默认路径，谁都能走），
+ * 下面那个进 Shizuku 引导页（可选增强，装了 Shizuku 就不用去系统设置里翻，
+ * 连侧载 App 会遇到的「受限设置」拦截都绕过去了）。
  */
 @Composable
-private fun StepA11y(a11yOn: Boolean, onOpenA11y: () -> Unit) {
+private fun StepA11y(
+    a11yOn: Boolean,
+    onOpenA11y: () -> Unit,
+    onOpenShizukuGuide: () -> Unit
+) {
     StepTitle(stringResource(R.string.wiz_s1_title))
     Spacer(Modifier.height(12.dp))
     BodyText(stringResource(R.string.wiz_s1_body))
@@ -214,6 +237,14 @@ private fun StepA11y(a11yOn: Boolean, onOpenA11y: () -> Unit) {
         text = stringResource(R.string.wiz_s1_btn),
         enabled = !a11yOn,
         onClick = onOpenA11y
+    )
+    // ⭐ 「去开启」**下面**的第二个入口：装了 Shizuku 的人走这条路更省事（也绕过了受限设置拦截）。
+    // 无障碍已经开好时不禁用 —— 这时候进来的人多半是想把「保持开启」那个开关也打开。
+    Spacer(Modifier.height(10.dp))
+    OutlinedActionButton(
+        text = stringResource(R.string.shz_entry_btn),
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onOpenShizukuGuide
     )
 }
 

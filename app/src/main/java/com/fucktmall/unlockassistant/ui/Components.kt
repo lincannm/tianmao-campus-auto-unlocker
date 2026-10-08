@@ -603,3 +603,4 @@ fun OutlinedButtonPair(
         OutlinedActionButton(text = rightText, modifier = Modifier.weight(1f), onClick = onRight)
     }
 }
+
