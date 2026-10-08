@@ -91,12 +91,21 @@
     <string name="shz_failed">Shizuku 没能打开无障碍，请去系统设置里手动打开</string>
     <string name="shz_download_failed">打不开浏览器 · 下载地址：github.com/thedjchi/Shizuku/releases</string>
 
+    <!-- 一次性授权：拿到后本App 自己就能写回，不再要求 Shizuku 当时在跑。 -->
+    <string name="shz_perm_ok">已获得直接写回权限 · 不再要求 Shizuku 在运行</string>
+    <string name="shz_perm_missing">还没获得直接写回权限</string>
+    <string name="shz_perm_hint">授权之后本App 自己就能把无障碍写回来，不再需要 Shizuku 一直在运行 —— 只要它在这台机器上装好过、并且你点过这一次。</string>
+    <string name="shz_perm_btn">用 Shizuku 授权（一次就够）</string>
+    <string name="shz_perm_done">已授权：以后写回不再依赖 Shizuku 在运行</string>
+    <string name="shz_perm_failed">授权失败：先启动 Shizuku 的服务，或改用下面的老办法</string>
+
     <!-- 设置面板第二只胶囊：顶部的「无障碍已开启」旁边再说一句"它靠 Shizuku 自动维持"。
          胶囊只有 ok / 不 ok 两种样子，所以"不 ok"只留给**当下确实维持不住**的两种情况。 -->
     <string name="set_auto_keep_on">无障碍自动维持中</string>
-    <string name="set_auto_keep_not_running">自动维持已开 · Shizuku 没在运行</string>
+    <string name="set_auto_keep_not_running">自动维持开着 · 需要 Shizuku 帮一次忙</string>
     <string name="set_auto_keep_a11y_off">无障碍未开启</string>
     <string name="set_auto_keep_armed">Shizuku 已就绪：下次打开本App 会自动把无障碍开启。</string>
+    <string name="set_auto_keep_no_path">自动维持已开 · 但现在写不回（去引导页看看）</string>
 
     <!-- 引导页：四步 + 视频教程 + 开发者模式路径图（图可点开全屏放大）。 -->
     <string name="shzg_steps_title">一共四步</string>

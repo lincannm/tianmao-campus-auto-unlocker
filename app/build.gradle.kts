@@ -20,8 +20,11 @@ android {
         // versionCode / versionName 只影响「关于」页显示和覆盖安装，跟行为无关。
         // ⚠️ 这两个值同时决定 CI 出包的 Release 名（tag = `v<versionName>`）：
         // 同名 Release 已存在时那条流水线会直接失败，所以每次要出包都得往上抬一格。
-        versionCode = 13
-        versionName = "3.11"
+        versionCode = 14
+        // ⚠️ 这一版**故意**带着 `-exp1`：无障碍服务暂时声明成 `feedbackGeneric`（不是读屏类），
+        //    目的是让 HyperOS 的「最近任务划掉卡片」能真的强停本App，好复现"强停丢授权"这条失效路径。
+        //    交付/出 Release 之前必须：①两处改回 `feedbackAllMask`；②versionName 回落到 `3.12`。
+        versionName = "3.12-exp1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

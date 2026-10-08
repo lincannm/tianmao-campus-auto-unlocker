@@ -224,10 +224,13 @@ private fun EntryFlow(resumeTick: Int, fromWidget: Boolean, onExit: () -> Unit) 
     LaunchedEffect(resumeTick) {
         if (fired) return@LaunchedEffect
 
-        // ⭐ 无障碍被系统清掉、而用户开过「用 Shizuku 保持无障碍开启」时：先用 Shizuku 把它写回来，
-        // 用户就感觉不到被清过（force-stop 之后本App 没有别的机会补救，这是唯一的一处）。
-        // 写不成功 / Shizuku 不在，就什么都不做 —— 下面照旧拦下并弹 [A11yOffDialog]。
-        if (AppState.isShizukuKeep(ctx) && !AppState.isAccessibilityEnabled(ctx)) {
+        // ⭐ 无障碍被系统清掉时先补回来。
+        // 两种情况都值得试：①用户开过这条保持机制；②本App 自己已经持有写系统设置的权限
+        // （那种情况下这次写**完全不经过 Shizuku**，所以不要求 Shizuku 在跑）。
+        // 写不成功 / 两条路都不通，就什么都不做 —— 下面照旧拦下并弹 [A11yOffDialog]。
+        if (!AppState.isAccessibilityEnabled(ctx) &&
+            (AppState.isShizukuKeep(ctx) || ShizukuA11y.hasWriteSecureSettings(ctx))
+        ) {
             withContext(Dispatchers.IO) {
                 ShizukuA11y.ensureEnabled(ctx, SHIZUKU_WRITE_TIMEOUT_MS)
             }

@@ -82,7 +82,9 @@ fun SettingsScreen(
     val shizukuReady = remember(resumeTick, now) {
         ShizukuA11y.state(ctx) == ShizukuA11y.State.READY
     }
-    val autoKeepOk = shizukuKeep && shizukuReady && a11yOn
+    // 有没有那条"自己就能写"的权限：有的话就不靠 Shizuku 在跑（见 ShizukuA11y.ensureEnabled）。
+    val canWriteSecure = remember(resumeTick, now) { ShizukuA11y.hasWriteSecureSettings(ctx) }
+    val autoKeepOk = shizukuKeep && a11yOn && (shizukuReady || canWriteSecure)
     val remainingMs = remember(resumeTick, now) { Session.remainingMs(ctx) }
     val logs = remember(resumeTick, now) { Session.snapshot() }
     // 两个「代按开锁」开关：界面上「打开 App」在前、「小部件」在后。
@@ -111,26 +113,29 @@ fun SettingsScreen(
                 // ⭐ 第二只胶囊只在用户开过「用 Shizuku 保持无障碍开启」之后才出现：
                 // 它回答的是「**此刻**有没有人在替我维持无障碍」。
                 //
-                // 判"不达标"只有两种，因为这两种**当下确实维持不住**：
-                // ① Shizuku 服务没在跑 —— 强停之后就没人能替我们写回，直到用户重新启动它的服务；
-                // ② 无障碍没开 —— 此刻没东西可维持（下次打开本App 会自动开启，所以下面补一句提示）。
+                // 判"不达标"有三种，按"用户还来不来得及救"排序说：
+                // ① 无障碍没开、但**还能写**（有那条一次性权限，或 Shizuku 在跑）—— 下次打开本App 就自己开，
+                //    所以下面补一句提示，别让它看起来像要用户去手动开；
+                // ② 无障碍没开、Shizuku 也没在跑 —— 要去把它的服务启动起来才会好；
+                // ③ 无障碍开着，但两条写回路径都不通 —— 一被清掉就没人补，得去引导页看看缺哪一步。
                 // ⚠️ 不做成"已开启"这种中性态：那只胶囊就只有 ok / 不 ok 两种样子（见 StatusChip），
-                //    而"这条机制开着"并不等于"现在受保护"。
+                //    而"这条机制开着"并不等于"此刻受保护"。
                 if (shizukuKeep) {
+                    val canRecover = shizukuReady || canWriteSecure
                     Spacer(Modifier.height(6.dp))
                     StatusChip(
                         ok = autoKeepOk,
                         okText = stringResource(R.string.set_auto_keep_on),
                         badText = stringResource(
-                            if (!shizukuReady) {
-                                R.string.set_auto_keep_not_running
-                            } else {
-                                R.string.set_auto_keep_a11y_off
+                            when {
+                                !a11yOn && canRecover -> R.string.set_auto_keep_a11y_off
+                                !a11yOn -> R.string.set_auto_keep_not_running
+                                else -> R.string.set_auto_keep_no_path
                             }
                         )
                     )
-                    // 无障碍关着时把"接下来会自己好"说清楚，免得看起来像要用户去手动开。
-                    if (shizukuReady && !a11yOn) {
+                    // 无障碍关着但还能自愈：把"接下来会自己好"说清楚。
+                    if (!a11yOn && canRecover) {
                         Spacer(Modifier.height(6.dp))
                         HintText(stringResource(R.string.set_auto_keep_armed))
                     }

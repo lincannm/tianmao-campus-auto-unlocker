@@ -76,11 +76,12 @@ class UnlockAccessibilityService : AccessibilityService() {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
                     AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
                     AccessibilityEvent.TYPE_WINDOWS_CHANGED
-            // 必须声明成「读屏类」服务（含 SPOKEN / BRAILLE 等全部反馈类型）：
-            // HyperOS 的「最近任务划掉卡片」等于 force-stop，而它只跳过看起来像读屏的无障碍服务。
-            // 声明成别的反馈类型 → 划掉卡片时被 `ProcessSceneCleaner: SwipeUpClean: force-stop`
-            // 强停，`accessibility_enabled` 与授权一起被系统清掉，只能让用户手动重开。
-            feedbackType = AccessibilityServiceInfo.FEEDBACK_ALL_MASK
+            // ⚠️ 实验包专用（3.11-exp1）：这里是 FEEDBACK_GENERIC，**故意**让 HyperOS 的
+            // 「最近任务划掉卡片」能强停本App（用来复现"强停丢授权"那条失效路径，用户要求）。
+            // 交付值必须是 FEEDBACK_ALL_MASK（含 SPOKEN / BRAILLE，即"读屏类"）：声明成别的反馈类型时，
+            // 划卡片会被 `ProcessSceneCleaner: SwipeUpClean: force-stop` 强停，
+            // `accessibility_enabled` 与授权一起被清掉。实验做完要连 XML 里那一处一起改回来。
+            feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             flags = flags or
                     AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
                     AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS

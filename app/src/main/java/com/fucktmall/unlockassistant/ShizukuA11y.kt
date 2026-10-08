@@ -49,11 +49,23 @@ object ShizukuA11y {
     /** `settings` 的可执行文件写绝对路径：不依赖 Shizuku 那边进程的 PATH。 */
     private const val SETTINGS_BIN = "/system/bin/settings"
 
+    /** `pm` 同上。 */
+    private const val PM_BIN = "/system/bin/pm"
+
+    /**
+     * 写系统设置要的那条权限。它的 protectionLevel 是
+     * `signature|privileged|development|installer|role` —— 带 `development` 标记，
+     * 所以 **adb / shell（uid 2000，Shizuku 的服务就是 shell）可以用 `pm grant` 授给声明过它的 App**。
+     * 拿到之后本App 自己就能写 `Settings.Secure`，**不再需要 Shizuku 当时在跑**。
+     */
+    const val PERMISSION_WRITE_SECURE_SETTINGS = "android.permission.WRITE_SECURE_SETTINGS"
+
     /** 界面上的三条状态（**没有「装没装」这一条**，理由见 [state]）。 */
     enum class State { NOT_RUNNING, NO_PERMISSION, READY }
 
     /**
-     * 当前状态。**刻意不判断「Shizuku 装没装」**：
+     * 当前状态（**只描述"能不能借 Shizuku 的 shell 身份跑命令"**，与那条一次性权限无关）。
+     * **刻意不判断「Shizuku 装没装」**：
      * Android 11+ 的包可见性让「查不到」和「没装」分不开，而各家发行版的包名又不一致，
      * 一旦查不到就会把**已经装了**的人引到「先去装一个」，比不判断更糟。
      * 所以只问 binder 与能力，装没装由用户自己看引导页第 1 步。
@@ -65,6 +77,9 @@ object ShizukuA11y {
      *
      * 探测走 [probeShellNow] 的缓存（5 秒），所以这个函数可以每秒被界面调用；
      * 冷启动那一次请先在 IO 线程预热缓存（见 [logDiagnostics]）。
+     *
+     * ⚠️ **这条路开着不等于能写**：拿过 [PERMISSION_WRITE_SECURE_SETTINGS] 的机器上，
+     * 写回完全不经过 Shizuku（见 [ensureEnabled]），那时本函数返回什么与写回能力无关。
      */
     fun state(ctx: Context): State = when {
         !binderAlive() -> State.NOT_RUNNING
@@ -224,15 +239,38 @@ object ShizukuA11y {
      * 无障碍关着就写回开启，**已是开启状态直接返回 true 不动系统设置**。
      *
      * 写两步：①把我们的组件追加进 `enabled_accessibility_services`（已经在里面就跳过）；
-     * ②`accessibility_enabled=1`。两步都由 Shizuku 以 shell 身份执行。
+     * ②`accessibility_enabled=1`。**谁来写有两档，优先第一档**：
+     *
+     * 1. **本App 自己写**（[hasWriteSecureSettings] 为真时）：用户在引导页用 Shizuku 授过一次
+     *    `WRITE_SECURE_SETTINGS` 之后就走这条 —— **完全不碰 Shizuku**，因此与"Shizuku 服务在不在跑"
+     *    无关，[state] 返回什么也不影响这条路；
+     * 2. **借 Shizuku 的 shell 身份写**：没那条权限时的退路（要 Shizuku 当时在跑）。
      *
      * ⚠️ `Settings.Secure` 的**读**普通 App 就能做，所以列表是本地读出来合并的，
-     * 只有写走 Shizuku。**耗时操作，调用方要放到 IO 线程**。
+     * **耗时操作，调用方要放到 IO 线程**。
      *
      * @return 调用结束时无障碍是不是开的（本来就开着也算 true）。
      */
     fun ensureEnabled(ctx: Context, timeoutMs: Long = 6000L): Boolean {
         if (AppState.isAccessibilityEnabled(ctx)) return true
+
+        // 第一档：本App 自己写。**这里绝不能先判 [state]** —— 那条路本来就不经过 Shizuku，
+        // 加了判断就等于"拿过权限也白拿"。
+        if (hasWriteSecureSettings(ctx)) {
+            val self = AppState.selfA11yComponent(ctx)
+            val current = readEnabledServices(ctx)
+            val present = current.split(':').any {
+                ComponentName.unflattenFromString(it.trim()) == self
+            }
+            if (!present) {
+                val short = self.flattenToShortString()
+                val next = if (current.isBlank()) short else "$current:$short"
+                if (!putSecure(ctx, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, next)) return false
+            }
+            return putSecure(ctx, Settings.Secure.ACCESSIBILITY_ENABLED, "1")
+        }
+
+        // 没有那条权限：退回借 Shizuku 的 shell 身份写（要 Shizuku 当时在跑）。
         if (state(ctx) != State.READY) {
             Session.addLog("Shizuku 不可用（${state(ctx)}），不动无障碍设置")
             return false
@@ -251,6 +289,59 @@ object ShizukuA11y {
             }
         }
         return settingsPut(ctx, Settings.Secure.ACCESSIBILITY_ENABLED, "1", timeoutMs)
+    }
+
+    /** 本App 自己有没有 `WRITE_SECURE_SETTINGS`（有就能直接写，不必借 Shizuku）。 */
+    fun hasWriteSecureSettings(ctx: Context): Boolean = try {
+        ctx.checkSelfPermission(PERMISSION_WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
+    } catch (t: Throwable) {
+        false
+    }
+
+    /**
+     * **让 Shizuku 替本App 授 `WRITE_SECURE_SETTINGS`**（一次就够，之后不再依赖 Shizuku 在跑）。
+     *
+     * 它执行的是 `/system/bin/pm grant <本App> android.permission.WRITE_SECURE_SETTINGS`；
+     * 这条权限带 `development` 保护标记，所以 shell 身份有资格授它。
+     * ⚠️ 前提是**清单里声明过它** —— 没声明时 `pm grant` 会报 `Unknown permission`。
+     *
+     * 这个动作是"给本App 补一条权限"，不是"用户手动去系统里开开关"，所以不会撞上侧载 App 的
+     * 「受限设置」拦截（那条拦截挡的是用户手拨开关那条路）。
+     *
+     * **耗时操作（起远端进程），调用方要放到 IO 线程**。
+     */
+    fun grantWriteSecureSettings(ctx: Context, timeoutMs: Long = 6000L): Boolean {
+        if (hasWriteSecureSettings(ctx)) return true
+        if (!binderAlive()) {
+            Session.addLog("授权失败：Shizuku 服务没在运行")
+            return false
+        }
+        val r = runAsShell(
+            arrayOf(PM_BIN, "grant", ctx.packageName, PERMISSION_WRITE_SECURE_SETTINGS),
+            timeoutMs
+        )
+        val ok = r.ok && hasWriteSecureSettings(ctx)
+        Session.addLog(
+            if (ok) {
+                "已用 Shizuku 给本App 授 WRITE_SECURE_SETTINGS（之后不再依赖 Shizuku 在跑）"
+            } else {
+                "用 Shizuku 授 WRITE_SECURE_SETTINGS 失败（exit=${r.exitCode}）：${r.stderr}"
+            }
+        )
+        return ok
+    }
+
+    /** 用本App 自己的权限写一条 `Settings.Secure`（没有权限时 `putString` 会静默失败，所以读回核对）。 */
+    private fun putSecure(ctx: Context, key: String, value: String): Boolean {
+        val ok = try {
+            Settings.Secure.putString(ctx.contentResolver, key, value) &&
+                Settings.Secure.getString(ctx.contentResolver, key) == value
+        } catch (t: Throwable) {
+            Session.addLog("自己写 $key 失败：${t.javaClass.simpleName}: ${t.message}")
+            return false
+        }
+        Session.addLog(if (ok) "自己写回系统设置：$key" else "自己写 $key 失败（权限已失效？）")
+        return ok
     }
 
     /** 系统设置里那串启用列表（`包名/类名:包名/类名`），读不到就当空。 */

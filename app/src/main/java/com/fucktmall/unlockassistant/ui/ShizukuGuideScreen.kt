@@ -108,6 +108,7 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
     val state = rememberShizukuStatus(ctx, resumeTick, tick)
     val a11yOn = remember(resumeTick, tick) { AppState.isAccessibilityEnabled(ctx) }
     var keep by remember(resumeTick, tick) { mutableStateOf(AppState.isShizukuKeep(ctx)) }
+    var canWrite by remember(resumeTick, tick) { mutableStateOf(ShizukuA11y.hasWriteSecureSettings(ctx)) }
     var zoomOpen by remember { mutableStateOf(false) }
 
     // 「写一次并反馈结果」：状态卡里的按钮与开关都用它，行为只写一份。
@@ -117,6 +118,19 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
             Toast.makeText(
                 ctx,
                 if (ok) R.string.shz_done else R.string.shz_failed,
+                Toast.LENGTH_LONG
+            ).show()
+            tick++
+        }
+    }
+
+    // 一次性授权：让 Shizuku 替本App 授 WRITE_SECURE_SETTINGS，之后写回不再依赖 Shizuku 在跑。
+    val runGrant: () -> Unit = {
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) { ShizukuA11y.grantWriteSecureSettings(ctx) }
+            Toast.makeText(
+                ctx,
+                if (ok) R.string.shz_perm_done else R.string.shz_perm_failed,
                 Toast.LENGTH_LONG
             ).show()
             tick++
@@ -159,6 +173,27 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
                 .padding(horizontal = 20.dp)
         ) {
             StepCard { BodyText(stringResource(R.string.shzg_lead)) }
+
+            Spacer(Modifier.height(12.dp))
+
+            // ⭐ 一次性授权卡：拿到之后本App 自己就能写回，**不再要求 Shizuku 当时在跑**。
+            // 所以它排在这里而不是藏进设置页 —— 这是"让这条路不依赖 Shizuku 常驻"的关键一步。
+            StepCard {
+                StatusChip(
+                    ok = canWrite,
+                    okText = stringResource(R.string.shz_perm_ok),
+                    badText = stringResource(R.string.shz_perm_missing)
+                )
+                if (!canWrite) {
+                    Spacer(Modifier.height(8.dp))
+                    HintText(stringResource(R.string.shz_perm_hint))
+                    Spacer(Modifier.height(10.dp))
+                    PrimaryButton(
+                        text = stringResource(R.string.shz_perm_btn),
+                        onClick = runGrant
+                    )
+                }
+            }
 
             Spacer(Modifier.height(12.dp))
 

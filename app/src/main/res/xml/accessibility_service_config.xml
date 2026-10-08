@@ -1,16 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
+  ⚠️ **实验包专用（3.11-exp1）**：`accessibilityFeedbackType` 现在是 `feedbackGeneric`，
+  **不是交付值** —— 交付值必须是 `feedbackAllMask`（含 SPOKEN / BRAILLE，即"读屏类"），
+  否则 HyperOS 的「最近任务划掉卡片」＝ force-stop 会强停本App 并把无障碍授权一起清掉。
+  这一版就是**故意**让它能被强停，用来复现"强停丢授权"这条失效路径（用户要求，见 ../AGENTS.md §3.6）。
+  实验做完必须连同 UnlockAccessibilityService.kt 里的同一个值一起改回 feedbackAllMask。
+
   说明：
   - canRetrieveWindowContent 必须为 true，否则拿不到控件树（WebView 里的「跳过」也就看不见）。
   - flagRetrieveInteractiveWindows 让服务能看到当前交互窗口。
   - 不在这里写 packageNames：包名过滤放在代码里做，便于以后按需放宽。
-  - accessibilityFeedbackType **必须是 feedbackAllMask**（含 SPOKEN / BRAILLE，即"读屏类"）：
-    HyperOS 的「最近任务划掉卡片」= force-stop，而它只跳过看起来像读屏的无障碍服务；
-    声明成别的值（如 feedbackGeneric）时，划掉卡片会把本App 强停。
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeWindowsChanged"
-    android:accessibilityFeedbackType="feedbackAllMask"
+    android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault|flagReportViewIds|flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
     android:notificationTimeout="100"

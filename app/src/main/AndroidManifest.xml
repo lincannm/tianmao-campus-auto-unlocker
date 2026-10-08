@@ -29,6 +29,15 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!--
+      ⚠️ **实验包专用（3.11-exp1）**：这条权限是用来测「Shizuku 能不能替我们 `pm grant` 它」。
+      它**不是**交付形态 —— 交付物一条特权权限都不申请（见 ../AGENTS.md §2 第 6 条）。
+      这条权限的 protectionLevel 是 `signature|privileged|development|installer|role`，
+      带 `development` 标记 ⇒ adb / shell（uid 2000，Shizuku 的服务就是）可以 `pm grant` 给任何
+      **在清单里声明过它**的 App。测完不管结论如何都要把它删掉，或者按结论改成正式方案。
+    -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+
+    <!--
       本App **不申请** `WRITE_SECURE_SETTINGS`：无障碍被系统清掉之后，
       「写回开关」这件事由 Shizuku 以 shell 身份做（见 ShizukuA11y.kt），本App 自己只读系统设置。
       用户没打开「用 Shizuku 保持无障碍开启」那个开关时，一行都不写。
@@ -98,6 +107,18 @@
             android:exported="false"
             android:label="@string/wpin_title"
             android:launchMode="singleTop" />
+
+        <!--
+          ⚠️ **实验包专用（3.11-exp1）**：无界面的权限探针，只用来回答「不经过 Shizuku，本App 自己能不能写
+          Settings.Secure」（见 PermProbeActivity）。`exported=true` 是为了能用 adb 拉起来测，
+          **交付前这个 activity 与对应的类都要删掉**。
+        -->
+        <activity
+            android:name=".PermProbeActivity"
+            android:exported="true"
+            android:label="@string/shzg_title"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay" />
 
         <!--
           Shizuku 引导页：向导第 1 步与设置面板里那个「通过Shizuku开启无障碍（推荐）」都跳到这。
