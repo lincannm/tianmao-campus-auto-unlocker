@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -82,9 +84,12 @@ private const val ZOOM_DOUBLE_TAP = 2.5f
  *
  * **为什么单独一页**：用这条路的人得先装 Shizuku、开「开发者模式」、启动它的服务 ——
  * 这些步骤写在向导/设置里既挤（向导首屏会被顶下去），又容易变成两份对不上的说法。
- * 于是那两个页面**只留一个按钮**，点进来才是这一页，而且这一页假定读者**完全没听说过 Shizuku**：
- * 页面顺序就是操作顺序 —— 这是干什么的 → 我现在到哪一步（状态 + 一个动作按钮 + 下载入口）
- * → 视频教程 → 四步 → 开发者模式路径图（可点开全屏放大）→ 不装也能用的兜底。
+ * 于是那两个页面**只留一个按钮**，点进来才是这一页，而且这一页假定读者**完全没听说过 Shizuku**。
+ *
+ * 页面顺序：一句话讲清这是干什么的（页头副标题）→ 我现在到哪一步（状态胶囊 + 一只动作按钮 +
+ * 常显的下载入口）→ 不装 Shizuku 的兜底 → 「第一次怎么装」（三步 + 开发者模式路径图 + 视频教程）。
+ * ⭐ 最后那一整块**就绪时默认收起**：状态已经就绪（本页最常见的样子）时，那三步对用户是纯噪音；
+ * 没就绪时默认摊开，因为那正是他当下要做的事。收起 / 展开随时可点。
  *
  * ⭐ **状态卡里只有一只动作按钮，而且文案固定**（「使用Shizuku开启无障碍」）：当前缺哪一步由状态胶囊表达，
  * 按钮不按状态改名；真走不下去时**按下之后才弹窗**说清是哪一种（服务没在跑 → [ShizukuOffDialog]，
@@ -119,6 +124,11 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
     // 这条路此刻能不能用：Shizuku 在跑就能借它的 shell 身份写；它没在跑、但本App 已经拿过
     // 那条一次性写回权限，也照样能写（第一档完全不经过 Shizuku，见 ShizukuA11y.ensureConnected）。
     val mechanismReady = state == ShizukuA11y.State.READY || canWrite
+
+    // 「第一次怎么装」那块开不开：null = 跟着状态走（就绪收成一行、没就绪摊开），
+    // 用户点过一次之后就按他点的算。
+    var howToOverride by remember { mutableStateOf<Boolean?>(null) }
+    val showHowTo = howToOverride ?: !mechanismReady
 
     /**
      * 那一只按钮的动作：按一次走一步，缺哪一步就走哪一步。
@@ -163,7 +173,11 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
     }
 
     Screen {
-        ScreenHeader(title = stringResource(R.string.shzg_title), onBack = onBack)
+        ScreenHeader(
+            title = stringResource(R.string.shzg_title),
+            subtitle = stringResource(R.string.shzg_lead),
+            onBack = onBack
+        )
 
         Column(
             modifier = Modifier
@@ -172,12 +186,8 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
         ) {
-            StepCard { BodyText(stringResource(R.string.shzg_lead)) }
-
-            Spacer(Modifier.height(12.dp))
-
-            // 状态 + **一只文案固定**的按钮：胶囊说"现在什么情况"，按钮永远叫「使用Shizuku开启无障碍」，
-            // 走不下去时按下之后才弹窗解释（见 runOne）。
+            // 状态 + **一只文案固定**的按钮 + 常显的下载入口：胶囊说"现在什么情况 / 下一步做什么"，
+            // 按钮永远叫「使用Shizuku开启无障碍」，走不下去时按下之后才弹窗解释（见 runOne）。
             StepCard {
                 StatusChip(
                     ok = mechanismReady,
@@ -216,58 +226,26 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
                         Toast.makeText(ctx, R.string.shz_download_failed, Toast.LENGTH_LONG).show()
                     }
                 }
+                Spacer(Modifier.height(6.dp))
+                HintText(stringResource(R.string.shzg_download_hint))
             }
 
-            Spacer(Modifier.height(12.dp))
+            // 兜底那条路摆在状态卡下面：它和上面那一只按钮是二选一，不该埋到页面最底下。
+            Spacer(Modifier.height(14.dp))
+            HintText(stringResource(R.string.shzg_no_shizuku))
 
-            // 视频教程放在步骤前面：小白更愿意先看一遍演示，再照着做。
-            StepCard {
-                CardTitle(stringResource(R.string.shzg_video_title))
-                Spacer(Modifier.height(8.dp))
-                BodyText(stringResource(R.string.shzg_video_body))
-                Spacer(Modifier.height(12.dp))
-                PrimaryButton(text = stringResource(R.string.shzg_video_btn)) {
+            Spacer(Modifier.height(18.dp))
+
+            HowToCard(
+                expanded = showHowTo,
+                onToggle = { howToOverride = !showHowTo },
+                onZoom = { zoomOpen = true },
+                onVideo = {
                     if (!ShizukuA11y.openUrl(ctx, VIDEO_TUTORIAL_URL)) {
                         Toast.makeText(ctx, R.string.shzg_video_failed, Toast.LENGTH_LONG).show()
                     }
                 }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            StepsCard(
-                title = stringResource(R.string.shzg_steps_title),
-                steps = listOf(
-                    stringResource(R.string.shzg_step1),
-                    stringResource(R.string.shzg_step2),
-                    stringResource(R.string.shzg_step3),
-                    stringResource(R.string.shzg_step4)
-                )
             )
-
-            Spacer(Modifier.height(12.dp))
-
-            // 第 2 步那张图：卡里按宽度铺满，点一下全屏放大（图里字多，不放大看不清）。
-            // 宽高比写死，不让 painter 自己去"适配"（同 AboutScreen 三张插图踩过的坑）。
-            StepCard {
-                CardTitle(stringResource(R.string.shzg_img_title))
-                Spacer(Modifier.height(10.dp))
-                Image(
-                    painter = painterResource(R.drawable.il_devmode_paths),
-                    contentDescription = stringResource(R.string.shzg_img_desc),
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(DEVMODE_IMAGE_RATIO)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { zoomOpen = true }
-                )
-                Spacer(Modifier.height(8.dp))
-                HintText(stringResource(R.string.shzg_img_hint))
-            }
-
-            Spacer(Modifier.height(12.dp))
-            HintText(stringResource(R.string.shzg_no_shizuku))
             Spacer(Modifier.height(20.dp))
         }
     }
@@ -289,16 +267,119 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
     }
 }
 
-/** 卡内小标题（17sp SemiBold，与 `NoticeCard` / `StepsCard` 的标题一致）。 */
+/** 卡内小标题（17sp SemiBold，与 `NoticeCard` / `StepsCard` 的标题一致）。字色按 [TintedCard] 的底色取。 */
 @Composable
-private fun CardTitle(text: String) {
+private fun CardTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
+        modifier = modifier,
         fontSize = 17.sp,
         lineHeight = 24.sp,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = MaterialTheme.colorScheme.onPrimaryContainer,
         fontWeight = FontWeight.SemiBold
     )
+}
+
+/**
+ * 「第一次怎么装」那一整块（一张可折叠的卡）：三步说明 → 开发者模式路径图 → 视频教程入口。
+ *
+ * ⭐ **就绪时默认收起**（展开态由调用方持有）：状态已经就绪时这些内容对用户是纯噪音，
+ * 收成"一行标题 + 一句怎么展开"；没就绪时默认摊开，那正是他当下要做的事。
+ *
+ * 路径图夹在第 1 步里（第 1 步讲的就是"去哪点 7 次"），不再单列一张卡、也不写"见下面那张图"。
+ * 宽高比写死，不让 painter 自己去"适配"（同 AboutScreen 三张插图踩过的坑）。
+ */
+@Composable
+private fun HowToCard(
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onZoom: () -> Unit,
+    onVideo: () -> Unit
+) {
+    TintedCard(onClick = onToggle) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            CardTitle(
+                text = stringResource(R.string.shzg_howto_title),
+                modifier = Modifier.weight(1f)
+            )
+            // 箭头方向就是当前状态（收起时朝下 = 能往下展，展开时朝上 = 能收回去）。
+            Icon(
+                painter = painterResource(
+                    if (expanded) R.drawable.ic_expand_less else R.drawable.ic_expand_more
+                ),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+
+        if (!expanded) {
+            Spacer(Modifier.height(8.dp))
+            HintText(
+                text = stringResource(R.string.shzg_howto_collapsed),
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            return@TintedCard
+        }
+
+        Spacer(Modifier.height(14.dp))
+        StepRow(
+            index = 1,
+            title = stringResource(R.string.shzg_step_dev_title),
+            body = stringResource(R.string.shzg_step_dev_body),
+            titleWeight = FontWeight.SemiBold
+        )
+        Spacer(Modifier.height(10.dp))
+        Image(
+            painter = painterResource(R.drawable.il_devmode_paths),
+            contentDescription = stringResource(R.string.shzg_img_desc),
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(DEVMODE_IMAGE_RATIO)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClick = onZoom)
+        )
+        Spacer(Modifier.height(6.dp))
+        HintText(
+            text = stringResource(R.string.shzg_img_hint),
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+
+        Spacer(Modifier.height(16.dp))
+        StepRow(
+            index = 2,
+            title = stringResource(R.string.shzg_step_svc_title),
+            body = stringResource(R.string.shzg_step_svc_body),
+            titleWeight = FontWeight.SemiBold
+        )
+        Spacer(Modifier.height(16.dp))
+        StepRow(
+            index = 3,
+            title = stringResource(R.string.shzg_step_back_title),
+            body = stringResource(R.string.shzg_step_back_body),
+            titleWeight = FontWeight.SemiBold
+        )
+
+        // 视频教程摆在三步之后：它是"看不懂再来"，不跟主按钮抢那一屏的注意力（所以是 outlined）。
+        Spacer(Modifier.height(18.dp))
+        CardTitle(stringResource(R.string.shzg_video_title))
+        Spacer(Modifier.height(6.dp))
+        BodyText(
+            text = stringResource(R.string.shzg_video_body),
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+        Spacer(Modifier.height(10.dp))
+        OutlinedActionButton(
+            text = stringResource(R.string.shzg_video_btn),
+            modifier = Modifier.fillMaxWidth()
+        ) { onVideo() }
+
+        Spacer(Modifier.height(14.dp))
+        HintText(
+            text = stringResource(R.string.shzg_steps_foot),
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    }
 }
 
 /**

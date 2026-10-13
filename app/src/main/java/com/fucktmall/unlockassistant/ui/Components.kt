@@ -198,15 +198,89 @@ fun NoticeCard(title: String, body: String, modifier: Modifier = Modifier) {
 }
 
 /**
+ * 主题色底的卡：`primaryContainer` + 20dp 圆角 + 20dp 内边距。
+ *
+ * [StepsCard] 就是它的一张固定排法；需要**自己往步骤之间插东西**（插图、按钮）的地方直接用它。
+ * 给了 `onClick` 就整张卡可点（用来折叠 / 展开）。
+ */
+@Composable
+fun TintedCard(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.primaryContainer
+    ) {
+        Column(modifier = Modifier.padding(20.dp), content = content)
+    }
+}
+
+/**
+ * 一条编号步骤：左边序号圆点，右边一行标题（可选带一段正文）。
+ *
+ * 底色写死成 `primaryContainer` 卡里的那套（`onPrimaryContainer` 字、圆点用底色挖空）——
+ * 换底色要连同调用方一起改。
+ *
+ * @param titleWeight 有正文时把它加粗，一行小标题就能被扫到；只有标题的老用法保持常规字重。
+ */
+@Composable
+fun StepRow(
+    index: Int,
+    title: String,
+    body: String? = null,
+    titleWeight: FontWeight = FontWeight.Normal
+) {
+    Row(verticalAlignment = Alignment.Top) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "$index",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primaryContainer
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                lineHeight = 26.sp,
+                fontWeight = titleWeight,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            if (body != null) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = body,
+                    fontSize = 15.sp,
+                    lineHeight = 24.sp,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
+    }
+}
+
+/**
  * 编号步骤卡：教用户「在系统设置里怎么点」。与 [NoticeCard] 同色系，但一眼看得出是"照做"的清单。
  *
  * 为什么需要：向导第 1 步要用户去系统设置开无障碍，而那一页**不在本App 里** ——
  * 用户点完就跳走，回来时全靠记忆；那一页可能叫「无障碍」也可能叫「辅助功能」，
  * 服务列表还藏在「已下载的应用 / 已安装的服务」里，只给一句话等于让人自己找。
  * ⚠️ 正文必须用**跨品牌的通用说法**：不能把某一个品牌的路径当成所有人的路径。
- *
- * 序号圆点是 `onPrimaryContainer` 实心底 + `primaryContainer` 字色 —— 在主题色上挖空，
- * 不需要额外的语义色（本主题里可用色不多，见 [StatusChip] 的说明）。
  */
 @Composable
 fun StepsCard(
@@ -214,49 +288,18 @@ fun StepsCard(
     steps: List<String>,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.primaryContainer
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text(
-                text = title,
-                fontSize = 17.sp,
-                lineHeight = 24.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Spacer(Modifier.height(12.dp))
-            steps.forEachIndexed { i, step ->
-                if (i > 0) Spacer(Modifier.height(12.dp))
-                Row(verticalAlignment = Alignment.Top) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "${i + 1}",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        text = step,
-                        modifier = Modifier.weight(1f),
-                        fontSize = 16.sp,
-                        lineHeight = 26.sp,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
+    TintedCard(modifier = modifier) {
+        Text(
+            text = title,
+            fontSize = 17.sp,
+            lineHeight = 24.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+        Spacer(Modifier.height(12.dp))
+        steps.forEachIndexed { i, step ->
+            if (i > 0) Spacer(Modifier.height(12.dp))
+            StepRow(index = i + 1, title = step)
         }
     }
 }
@@ -402,25 +445,29 @@ fun StepTitle(text: String) {
     )
 }
 
-/** MD3 bodyLarge。文案里自己带 \n，一行一个意思，避免一大段要读。 */
+/**
+ * MD3 bodyLarge。文案里自己带 \n，一行一个意思，避免一大段要读。
+ *
+ * @param color 默认是页面底上的字色；卡底不是 `surface` 时（如 [TintedCard]）要显式传。
+ */
 @Composable
-fun BodyText(text: String) {
+fun BodyText(text: String, color: Color = MaterialTheme.colorScheme.onSurface) {
     Text(
         text = text,
         fontSize = 16.sp,
         lineHeight = 26.sp,
-        color = MaterialTheme.colorScheme.onSurface
+        color = color
     )
 }
 
-/** MD3 bodySmall / labelMedium：补充说明，弱一级。 */
+/** MD3 bodySmall / labelMedium：补充说明，弱一级。`color` 同 [BodyText]。 */
 @Composable
-fun HintText(text: String) {
+fun HintText(text: String, color: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
     Text(
         text = text,
         fontSize = 13.sp,
         lineHeight = 20.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
+        color = color
     )
 }
 
