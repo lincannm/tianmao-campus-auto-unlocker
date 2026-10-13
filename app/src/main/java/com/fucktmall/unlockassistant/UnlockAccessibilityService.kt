@@ -78,10 +78,10 @@ class UnlockAccessibilityService : AccessibilityService() {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
                     AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
                     AccessibilityEvent.TYPE_WINDOWS_CHANGED
-            // ⚠️ 必须是 FEEDBACK_ALL_MASK（含 SPOKEN / BRAILLE，即"读屏类"）：声明成别的反馈类型时，
-            // 划最近任务的卡片会被 `ProcessSceneCleaner: SwipeUpClean: force-stop` 强停，
-            // `accessibility_enabled` 与授权一起被清掉。XML 里那一处同值。
-            feedbackType = AccessibilityServiceInfo.FEEDBACK_ALL_MASK
+            // ⚠️ 当前是 FEEDBACK_GENERIC，**不要改成 FEEDBACK_ALL_MASK**：读屏类声明只在 HyperOS 上
+            // 躲得开「划掉卡片 / ✕一键清理」那种强停，而本工作区要复现的正是别的机型那种失效路径
+            // （服务掉进 `Crashed services` 后由 ensureConnected 重绑回来）。XML 里那一处同值，要改一起改。
+            feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             flags = flags or
                     AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
                     AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS

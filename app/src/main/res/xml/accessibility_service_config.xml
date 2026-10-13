@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ⚠️ `accessibilityFeedbackType` **必须是** `feedbackAllMask`（含 SPOKEN / BRAILLE，即"读屏类"）：
-  HyperOS 的「最近任务划掉卡片」＝ force-stop，而强停必清无障碍授权（AOSP 设计，没有 flag 豁免）；
-  它的清理会跳过"看起来像读屏"的无障碍服务，所以只有声明成读屏类才不会被那个手势强停。
-  同一个值在 UnlockAccessibilityService.onServiceConnected() 里还会被钉一遍。
-  改这个值之前先跑 work/v3/swipe_kill_test.ps1 复验（见 ../AGENTS.md §3.6）。
+  ⚠️ `accessibilityFeedbackType` 当前是 **`feedbackGeneric`**，**不要改成 `feedbackAllMask`**：
+  「读屏类」声明只在 HyperOS 上躲得开「最近任务划掉卡片 / ✕一键清理」那种强停，别的 ROM 不一定，
+  而这个工作区要的正是**复现别的机型那种失效路径**（服务掉进 `Crashed services` 之后由本App 自己重绑回来）。
+  改回读屏类会让本机再也测不出那条路径；**要改必须先得到用户本人的明确要求**。
+  同一个值在 UnlockAccessibilityService.onServiceConnected() 里还会被钉一遍，两处要一起改。
 
   说明：
   - canRetrieveWindowContent 必须为 true，否则拿不到控件树（WebView 里的「跳过」也就看不见）。
@@ -13,7 +13,7 @@
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeWindowsChanged"
-    android:accessibilityFeedbackType="feedbackAllMask"
+    android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault|flagReportViewIds|flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
     android:notificationTimeout="100"
