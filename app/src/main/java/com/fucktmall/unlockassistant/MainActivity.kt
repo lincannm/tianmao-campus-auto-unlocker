@@ -27,12 +27,13 @@ import kotlinx.coroutines.withContext
 import java.net.URLEncoder
 
 /**
- * 打开App 这条路上等 Shizuku 写回无障碍开关的上限。
+ * 打开App 这条路上「把无障碍弄回来」的上限。
  *
- * 开门是「现在就要用」，不能为了写一次设置把人晾在跳转前面；实测一次写入是百毫秒级，
- * 这个值只是兜底（Shizuku 没在跑时 [ShizukuA11y.ensureEnabled] 会立刻返回，不会等）。
+ * 开门是「现在就要用」，不能为了修一次无障碍把人晾在跳转前面；实测一次写入是百毫秒级，
+ * 这个值只是兜底（两条写回路径都不通时 [ShizukuA11y.ensureConnected] 会立刻返回，不会干等）。
+ * 里面还要留出「写完等服务绑上」的时间，所以比单纯的一次写入宽松。
  */
-private const val SHIZUKU_WRITE_TIMEOUT_MS = 1500L
+private const val A11Y_FIX_TIMEOUT_MS = 3000L
 
 /**
  * 「抛 deep link」的结果。
@@ -158,6 +159,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 动作日志同时落到 files/session.log：有些 ROM 会把第三方 App 自己打的 logcat 行滤掉，
+        // 那时排查只能靠这个文件（debug 包用 run-as 就能读）。
+        Session.attachLogFile(this)
         // targetSdk 36 ⇒ Android 15+ 强制 edge-to-edge；Compose 侧用 WindowInsets 让开系统栏。
         enableEdgeToEdge()
 
@@ -204,18 +208,22 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * 「直接开门」的画面：无障碍没开就停在提示对话框上等用户选，天猫校园没装也只给一个提示。
+ * 「直接开门」的画面：无障碍不可用就停在提示对话框上等用户选，天猫校园没装也只给一个提示。
  *
  * [resumeTick] 变化会重新判定一次：用户去开了无障碍再回来就**自动接着跳**，不用再点图标。
  *
- * 判定之前还有一步（只在用户开过「用 Shizuku 保持无障碍开启」时发生）：让 Shizuku 把被系统
- * 清掉的无障碍写回来。它跑在 IO 线程、有超时，失败也不影响下面的判定。
+ * 判定之前还有一步（只在用户开过那条保持机制、或本App 已持有写系统设置的权限时发生）：
+ * 把无障碍弄到「服务真的连上」为止 —— 既管"开关被强停清掉了"，也管
+ * "开关还开着、服务却没连上"（见 [ShizukuA11y.ensureConnected]）。它跑在 IO 线程、有超时，
+ * 失败也不影响下面的判定。
  */
 @Composable
 private fun EntryFlow(resumeTick: Int, fromWidget: Boolean, onExit: () -> Unit) {
     val ctx = LocalContext.current
     var fired by remember { mutableStateOf(false) }
     var a11yPrompt by remember { mutableStateOf(false) }
+    // 开关开着、服务却没连上：与「开关被关掉」分开说，因为这两种的修法不一样。
+    var a11yStale by remember { mutableStateOf(false) }
     var noTmall by remember { mutableStateOf(false) }
     // Shizuku 该在跑却没在跑（只在补写真的失败时置位，见下面的判定）。
     var shizukuOff by remember { mutableStateOf(false) }
@@ -227,34 +235,44 @@ private fun EntryFlow(resumeTick: Int, fromWidget: Boolean, onExit: () -> Unit) 
     LaunchedEffect(resumeTick) {
         if (fired) return@LaunchedEffect
 
-        // ⭐ 无障碍被系统清掉时先补回来。
-        // 两种情况都值得试：①用户开过这条保持机制；②本App 自己已经持有写系统设置的权限
-        // （那种情况下这次写**完全不经过 Shizuku**，所以不要求 Shizuku 在跑）。
-        // 补不回来时照旧拦下并弹 [A11yOffDialog]；**如果原因是 Shizuku 没在运行**（而用户确实开过这条路），
-        // 再加一句当面提示 + 一个启动入口，别让"没启动服务"看起来像本App 坏了。
-        if (!AppState.isAccessibilityEnabled(ctx) &&
-            (AppState.isShizukuKeep(ctx) || ShizukuA11y.hasWriteSecureSettings(ctx))
-        ) {
-            val ok = withContext(Dispatchers.IO) {
-                ShizukuA11y.ensureEnabled(ctx, SHIZUKU_WRITE_TIMEOUT_MS)
-            }
-            if (!ok && !ShizukuA11y.hasWriteSecureSettings(ctx) &&
-                ShizukuA11y.state(ctx) == ShizukuA11y.State.NOT_RUNNING
-            ) {
-                shizukuOff = true
+        // ⭐ 先把无障碍弄到「服务真的连上」。两种失效都要管：
+        // ①开关被强停清掉了（[AppState.isAccessibilityEnabled] 为假）；
+        // ②开关还开着、服务却没连上（框架把它记成 crashed 时就是这样，弹窗照样没人点）。
+        // 补写的前提是这两条路至少通一条：用户开过保持机制，或本App 已持有写系统设置的权限
+        // （后者这次写**完全不经过 Shizuku**，所以不要求 Shizuku 在跑）。
+        val a11yOn = AppState.isAccessibilityEnabled(ctx)
+        if (!a11yOn || !AppState.isServiceConnected()) {
+            if (AppState.isShizukuKeep(ctx) || ShizukuA11y.hasWriteSecureSettings(ctx)) {
+                val ok = withContext(Dispatchers.IO) {
+                    ShizukuA11y.ensureConnected(ctx, A11Y_FIX_TIMEOUT_MS)
+                }
+                // **如果原因是 Shizuku 没在运行**（而用户确实开过这条路、也没有自己写的权限），
+                // 再加一句当面提示 + 一个启动入口，别让"没启动服务"看起来像本App 坏了。
+                if (!ok && !a11yOn && !ShizukuA11y.hasWriteSecureSettings(ctx) &&
+                    ShizukuA11y.state(ctx) == ShizukuA11y.State.NOT_RUNNING
+                ) {
+                    shizukuOff = true
+                }
             }
         }
 
-        when (MainActivity.tryFireUnlock(ctx, source, armUnlock = arm)) {
-            FireResult.FIRED -> {
-                fired = true
-                onExit()
-            }
-            FireResult.A11Y_OFF -> a11yPrompt = true
-            FireResult.NO_TMALL -> noTmall = true
-            FireResult.FAILED -> {
-                MainActivity.openSettingsPanel(ctx)
-                onExit()
+        when {
+            // 开关就是关的。
+            !AppState.isAccessibilityEnabled(ctx) -> a11yPrompt = true
+            // 开关开着、服务却还是没连上：不能照旧跳 —— 跳过去路上的弹窗没人点，
+            // 用户看到的就是"无障碍明明是开的，却毫无反应"。
+            !AppState.isServiceConnected() -> a11yStale = true
+            else -> when (MainActivity.tryFireUnlock(ctx, source, armUnlock = arm)) {
+                FireResult.FIRED -> {
+                    fired = true
+                    onExit()
+                }
+                FireResult.A11Y_OFF -> a11yPrompt = true
+                FireResult.NO_TMALL -> noTmall = true
+                FireResult.FAILED -> {
+                    MainActivity.openSettingsPanel(ctx)
+                    onExit()
+                }
             }
         }
     }
@@ -274,6 +292,24 @@ private fun EntryFlow(resumeTick: Int, fromWidget: Boolean, onExit: () -> Unit) 
             },
             onDismiss = {
                 a11yPrompt = false
+                onExit()
+            }
+        )
+    }
+
+    // 开关开着、服务却没连上：同样是「不能跳」，但原因与修法都和上面那只不同，所以单独一框。
+    if (a11yStale) {
+        A11yOffDialog(
+            stale = true,
+            onOpenSettings = { MainActivity.openAccessibilitySettings(ctx) },
+            onOpenAnyway = {
+                a11yStale = false
+                fired = true
+                MainActivity.tryFireUnlock(ctx, "仍要打开", ignoreA11y = true, armUnlock = arm)
+                onExit()
+            },
+            onDismiss = {
+                a11yStale = false
                 onExit()
             }
         )

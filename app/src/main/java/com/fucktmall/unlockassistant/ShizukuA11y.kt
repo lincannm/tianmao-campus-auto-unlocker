@@ -5,32 +5,38 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.SystemClock
 import android.provider.Settings
 import rikka.shizuku.Shizuku
 import rikka.shizuku.ShizukuRemoteProcess
 import java.util.concurrent.TimeUnit
 
 /**
- * 「用 Shizuku 把无障碍在开启状态维持住」的全部代码（可选增强）。
+ * 「把无障碍维持住」的全部代码（可选增强）。
  *
  * **为什么需要它**：`force-stop` 会把本App 的无障碍授权一起清掉并持久化
  * （AOSP 的 `AccessibilityManagerService.onPackagesForceStoppedLocked`，没有任何声明能豁免），
- * 而把开关写回系统设置要 `WRITE_SECURE_SETTINGS` —— 本App **不申请**这条权限，
- * 改成借 Shizuku 的 shell 身份去执行 `settings put secure …`。
- * **分工要说准**：读设置（普通 App 就能读）、算出该写什么（我们自己的组件追加进列表）、
- * 发起调用，都是本App 做的；Shizuku 只出借它的 shell 身份跑那一条 `settings` 命令，
- * 因此本App 自己**从头到尾不持有** `WRITE_SECURE_SETTINGS`，清单里也依旧没有它。
+ * 而各品牌的「划掉卡片 / ✕一键清理」都会走到 force-stop —— HyperOS 上靠读屏类声明能躲开，
+ * 别的 ROM 不一定。写回系统设置要 `WRITE_SECURE_SETTINGS`，**谁来写有两档、优先第一档**：
  *
- * **触发时机只有一处**：打开本App 时先看一眼无障碍，被关掉就写回来
- * （见 [MainActivity] 的入口流程）。强停之后本App 的任何后台代码都跑不了，
- * 「用户完全不碰本App 也能自愈」需要常驻守护进程，那是另一层，这里不做。
+ * 1. **本App 自己写**（用户在引导页用 Shizuku 授过一次那条权限之后）：直接 `Settings.Secure.putString`，
+ *    **不碰 Shizuku、不看 binder**，因此与 Shizuku 在不在跑无关；
+ * 2. **借 Shizuku 的 shell 身份写**（没那条权限时的退路）：`settings put secure …`，要 Shizuku 当时在跑。
  *
- * **三条硬约束（改这段代码必须全部满足）**：
- * 1. **只有用户亲手打开过「用 Shizuku 保持无障碍开启」才写**（[AppState.isShizukuKeep]）；
+ * **分工要说准**：读设置（普通 App 就能读）、算出该写什么、什么时候写、发起调用，都是本App 做的；
+ * Shizuku 只在第二档里出借它的 shell 身份跑那一条 `settings` 命令。
+ *
+ * **触发时机只有一处**：打开本App 时（见 [MainActivity] 的入口流程）。强停之后本App 的任何后台代码
+ * 都跑不了，「用户完全不碰本App 也能自愈」需要常驻守护进程，那是另一层，这里不做。
+ *
+ * **四条硬约束（改这段代码必须全部满足）**：
+ * 1. **只有用户在引导页亲手按过那个动作按钮才写**（[AppState.isShizukuKeep]）；
  *    没开过这个开关时本App 对系统设置**只读**，行为与没有 Shizuku 时一模一样；
- * 2. **只往列表里加我们自己的那一项**：别人的无障碍服务原样保留，**永远不删别人的条目**，
+ * 2. **只动我们自己的那一项**：别人的无障碍服务原样保留，**永远不删别人的条目**，
  *    也不动 `accessibility_enabled` 以外的任何键；
- * 3. **写不进去就返回 false**，由调用方照旧提示「去系统设置里手动打开」，不许假装成功。
+ * 3. **写不进去就返回 false**，由调用方照旧提示「去系统设置里手动打开」，不许假装成功；
+ * 4. **第一档前面不许加 Shizuku 就绪判断** —— 拿到那条权限之后写回与 Shizuku 无关，
+ *    在那里加门槛等于把到手的权限废掉。
  */
 object ShizukuA11y {
 
@@ -177,7 +183,7 @@ object ShizukuA11y {
     /** 授权用的权限名（Shizuku 的 provider 声明它，管理器按它授权给调用方）。 */
     private const val PERMISSION_API_V23 = "moe.shizuku.manager.permission.API_V23"
 
-    /** binder 到了没有 = Shizuku 服务在不在跑（它在非 root 机上重启手机后要重新启动一次）。 */
+    /** binder 到了没有 = Shizuku 服务在不在跑（配对过一次之后，打开 Shizuku 它就会自己启动）。 */
     fun binderAlive(): Boolean = try {
         Shizuku.pingBinder()
     } catch (t: Throwable) {
@@ -256,40 +262,133 @@ object ShizukuA11y {
 
         // 第一档：本App 自己写。**这里绝不能先判 [state]** —— 那条路本来就不经过 Shizuku，
         // 加了判断就等于"拿过权限也白拿"。
-        if (hasWriteSecureSettings(ctx)) {
-            val self = AppState.selfA11yComponent(ctx)
-            val current = readEnabledServices(ctx)
-            val present = current.split(':').any {
-                ComponentName.unflattenFromString(it.trim()) == self
-            }
-            if (!present) {
-                val short = self.flattenToShortString()
-                val next = if (current.isBlank()) short else "$current:$short"
-                if (!putSecure(ctx, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, next)) return false
-            }
-            return putSecure(ctx, Settings.Secure.ACCESSIBILITY_ENABLED, "1")
-        }
-
-        // 没有那条权限：退回借 Shizuku 的 shell 身份写（要 Shizuku 当时在跑）。
-        if (state(ctx) != State.READY) {
+        if (!hasWriteSecureSettings(ctx) && state(ctx) != State.READY) {
             Session.addLog("Shizuku 不可用（${state(ctx)}），不动无障碍设置")
             return false
         }
 
         val self = AppState.selfA11yComponent(ctx)
         val current = readEnabledServices(ctx)
-        val present = current.split(':').any {
-            ComponentName.unflattenFromString(it.trim()) == self
-        }
-        if (!present) {
+        if (self !in listedComponents(current)) {
             val short = self.flattenToShortString()
             val next = if (current.isBlank()) short else "$current:$short"
-            if (!settingsPut(ctx, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, next, timeoutMs)) {
+            if (!writeSecure(ctx, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, next, timeoutMs)) {
                 return false
             }
         }
-        return settingsPut(ctx, Settings.Secure.ACCESSIBILITY_ENABLED, "1", timeoutMs)
+        return writeSecure(ctx, Settings.Secure.ACCESSIBILITY_ENABLED, "1", timeoutMs)
     }
+
+    /** [ensureConnected] / [rebind] 的默认等待上限：从 IO 线程发起到服务连上。 */
+    const val CONNECT_TIMEOUT_MS = 4000L
+
+    /**
+     * 冷启动时服务可能正在绑，先给它这么久，再判定"确实没连上"。
+     * 这一段是必需的：App 进程刚被拉起时 [UnlockAccessibilityService.running] 必然还是 false。
+     */
+    private const val COLD_BIND_GRACE_MS = 600L
+
+    /** 强制重绑时两次写入之间的间隔（值要真的变两次，框架才会重建服务）。 */
+    private const val REBIND_GAP_MS = 300L
+
+    /** 等服务连上时的轮询间隔。 */
+    private const val CONNECT_POLL_MS = 100L
+
+    /**
+     * 把无障碍保证到「**服务真的连上了**」为止；返回它到底连上没有。
+     *
+     * 为什么要单独有这个函数：系统设置里那个开关读的是"用户拨的开关"，
+     * **它开着不等于服务活着**。强停（各品牌的「划掉卡片 / ✕一键清理」都会走到 force-stop）
+     * 之后可能出现这种状态：`enabled_accessibility_services` 里**还有我们**、`accessibility_enabled=1`，
+     * 但服务不在 `dumpsys accessibility` 的 `Bound services` 里（被框架记成 `Crashed services`）、
+     * 进程也不在。这时弹窗一个都不会被点，而 [ensureEnabled] 看到设置里开着就直接返回 true，救不了。
+     *
+     * 三种输入状态分别处理：
+     *  1. 设置里没有我们（强停清掉了授权）→ 走 [ensureEnabled] 那两步写回；
+     *  2. 设置里有我们、服务却没连上 → [rebind]：把我们那一项摘掉再写回来，逼框架重新绑一次；
+     *  3. 已经连着 → 立刻返回 true，不动系统设置。
+     *
+     * ⚠️ **耗时操作**（会 sleep 等绑定、可能起远端进程），调用方必须放在 IO 线程。
+     *
+     * @return 服务是不是真的连上了。true 只代表"连上了"，不代表用户拨过那个开关。
+     */
+    fun ensureConnected(ctx: Context, timeoutMs: Long = CONNECT_TIMEOUT_MS): Boolean {
+        if (UnlockAccessibilityService.running) return true
+
+        if (!AppState.isAccessibilityEnabled(ctx) || AppState.selfA11yComponent(ctx) !in listedComponents(readEnabledServices(ctx))) {
+            ensureEnabled(ctx, timeoutMs)
+        } else if (!waitConnected(COLD_BIND_GRACE_MS)) {
+            rebind(ctx, timeoutMs)
+        }
+        val connected = waitConnected(timeoutMs)
+        if (!connected) {
+            Session.addLog("无障碍没连上：设置里${if (AppState.isAccessibilityEnabled(ctx)) "开着" else "关着"}，重绑没能救回来")
+        }
+        return connected
+    }
+
+    /**
+     * 强制重绑：把我们自己那一项从启用列表里**摘掉**、再**原样写回来**。
+     *
+     * 为什么是这一招：只重写同一个值，框架不会做任何事（实测：别的系统 App 把同一串写回去，
+     * 服务并没有重新绑上）。而值真的变了两次，框架才会重新走一遍「移除服务 → 重新绑定」，
+     * 那条路上不存在"这个组件崩过、所以不再绑"的记忆。
+     *
+     * **只动我们自己的条目**：别人的条目原样保留、顺序不变（[listWithoutSelf] 干的就是这件事）；
+     * 失败返回 false，由调用方如实提示，不许假装成功。
+     */
+    private fun rebind(ctx: Context, timeoutMs: Long): Boolean {
+        val current = readEnabledServices(ctx)
+        val without = listWithoutSelf(ctx, current)
+        if (without == current) return false // 列表里本来就没有我们，重绑没有意义
+
+        Session.addLog("无障碍服务没连上，强制重绑一次（先摘掉我们那一项，再写回来）")
+        if (!writeSecure(ctx, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, without, timeoutMs)) {
+            return false
+        }
+        sleep(REBIND_GAP_MS)
+        if (!writeSecure(ctx, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, current, timeoutMs)) {
+            return false
+        }
+        return writeSecure(ctx, Settings.Secure.ACCESSIBILITY_ENABLED, "1", timeoutMs)
+    }
+
+    /** 轮询等 [UnlockAccessibilityService.running] 变 true（它就是 `onServiceConnected` 里的回调）。 */
+    private fun waitConnected(maxMs: Long): Boolean {
+        if (UnlockAccessibilityService.running) return true
+        val until = SystemClock.elapsedRealtime() + maxMs
+        while (SystemClock.elapsedRealtime() < until) {
+            sleep(CONNECT_POLL_MS)
+            if (UnlockAccessibilityService.running) return true
+        }
+        return UnlockAccessibilityService.running
+    }
+
+    private fun sleep(ms: Long) {
+        try {
+            Thread.sleep(ms)
+        } catch (t: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+    }
+
+    /** 把启用列表解析成组件集合（写法有全名与短名两种，所以必须按组件比，不能按字符串比）。 */
+    private fun listedComponents(current: String): List<ComponentName> = current.split(':')
+        .mapNotNull { ComponentName.unflattenFromString(it.trim()) }
+
+    /** 从启用列表里摘掉我们自己的那一项；别人的原样保留、顺序不变。 */
+    private fun listWithoutSelf(ctx: Context, current: String): String {
+        val self = AppState.selfA11yComponent(ctx)
+        return current.split(':')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() && ComponentName.unflattenFromString(it) != self }
+            .joinToString(":")
+    }
+
+    /** 写一条 `Settings.Secure`：**优先本App 自己写**（持有那条权限时），否则借 Shizuku 的 shell 身份。 */
+    private fun writeSecure(ctx: Context, key: String, value: String, timeoutMs: Long): Boolean =
+        if (hasWriteSecureSettings(ctx)) putSecure(ctx, key, value)
+        else settingsPut(ctx, key, value, timeoutMs)
 
     /** 本App 自己有没有 `WRITE_SECURE_SETTINGS`（有就能直接写，不必借 Shizuku）。 */
     fun hasWriteSecureSettings(ctx: Context): Boolean = try {

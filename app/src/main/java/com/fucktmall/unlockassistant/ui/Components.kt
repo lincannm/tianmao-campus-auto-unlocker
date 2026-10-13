@@ -517,24 +517,36 @@ fun SwitchRow(text: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit
 }
 
 /**
- * 无障碍关闭时的提示。
+ * 无障碍不可用时的提示，两种情形共用这一只框（文案不同）。
  *
- * 存在的理由：无障碍没开，天猫校园的开屏广告就没人点掉，用户会看到
+ * 存在的理由：无障碍没在跑，天猫校园的开屏广告就没人点掉，用户会看到
  * 「本该自动关掉却还停在屏幕上的广告」而不知道发生了什么。
  * 所以默认**不打开**，先把话说清楚；想硬进也留了「仍要打开」，不把人堵死。
+ *
+ * @param stale 用户拨的开关是开着的、只是服务没连上（[dlg_a11y_stale_title]）。
+ *   与「开关被关掉」分开说，因为这两种的修法不一样。
  */
 @Composable
 fun A11yOffDialog(
     onOpenSettings: () -> Unit,
     onOpenAnyway: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    stale: Boolean = false
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.dlg_a11y_title)) },
+        title = {
+            Text(
+                stringResource(
+                    if (stale) R.string.dlg_a11y_stale_title else R.string.dlg_a11y_title
+                )
+            )
+        },
         text = {
             Text(
-                text = stringResource(R.string.dlg_a11y_body),
+                text = stringResource(
+                    if (stale) R.string.dlg_a11y_stale_body else R.string.dlg_a11y_body
+                ),
                 fontSize = 15.sp,
                 lineHeight = 24.sp
             )
@@ -551,9 +563,9 @@ fun A11yOffDialog(
 /**
  * Shizuku 服务没在运行时的提示。
  *
- * 存在的理由：非 root 手机上 Shizuku 的服务**每次开机/停止后都要重新启动一次**，
+ * 存在的理由：Shizuku 的服务在非 root 手机上重启后不会自己起来，
  * 而"没启动"这个状态光看页面上的小字很容易被忽略 —— 用户会以为本App 坏在别处。
- * 所以只要走到需要它的那一步（点授权按钮 / 点开启并保持），就当面把话说清楚，
+ * 所以只要走到需要它的那一步（补写失败、或用户按了那个动作按钮却探不通），就当面把话说清楚，
  * 并给一个直接拉起 Shizuku 的按钮；想自己处理也留了「稍后」。
  */
 @Composable

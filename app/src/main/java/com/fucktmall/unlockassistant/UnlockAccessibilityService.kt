@@ -71,17 +71,17 @@ class UnlockAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         running = true
+        // 服务这一侧的动作日志也落到 files/session.log（有些 ROM 会把第三方 App 的 logcat 行滤掉）。
+        Session.attachLogFile(this)
         // XML 里已经配了一份，这里再钉一遍，避免不同 ROM 忽略 XML 字段。
         serviceInfo?.apply {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
                     AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
                     AccessibilityEvent.TYPE_WINDOWS_CHANGED
-            // ⚠️ 实验包专用（3.11-exp1）：这里是 FEEDBACK_GENERIC，**故意**让 HyperOS 的
-            // 「最近任务划掉卡片」能强停本App（用来复现"强停丢授权"那条失效路径，用户要求）。
-            // 交付值必须是 FEEDBACK_ALL_MASK（含 SPOKEN / BRAILLE，即"读屏类"）：声明成别的反馈类型时，
-            // 划卡片会被 `ProcessSceneCleaner: SwipeUpClean: force-stop` 强停，
-            // `accessibility_enabled` 与授权一起被清掉。实验做完要连 XML 里那一处一起改回来。
-            feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
+            // ⚠️ 必须是 FEEDBACK_ALL_MASK（含 SPOKEN / BRAILLE，即"读屏类"）：声明成别的反馈类型时，
+            // 划最近任务的卡片会被 `ProcessSceneCleaner: SwipeUpClean: force-stop` 强停，
+            // `accessibility_enabled` 与授权一起被清掉。XML 里那一处同值。
+            feedbackType = AccessibilityServiceInfo.FEEDBACK_ALL_MASK
             flags = flags or
                     AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
                     AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS

@@ -17,10 +17,10 @@ import android.provider.Settings
  * 「打开App 直接进开锁界面」固定常开；无障碍没开时不硬跳，先弹提示
  * （见 [MainActivity.tryFireUnlock]）。
  *
- * ⭐ 无障碍被系统清掉后**不自己写回**：本App 对系统设置**只读**，授权没了只能提示用户去系统
- * 无障碍列表手动打开（「划掉卡片」那条路径由服务声明 `feedbackAllMask` 挡住，根本不会被清）。
- * **唯一的例外**是用户亲手打开的 [isShizukuKeep]：那时改由 **Shizuku 以 shell 身份**代写，
- * 本App 自己不申请也不持有 `WRITE_SECURE_SETTINGS`（见 [ShizukuA11y]）。
+ * ⭐ 无障碍被系统清掉后**只在用户显式开启过 [isShizukuKeep] 时才写回**（见 [ShizukuA11y]）：
+ * 写什么、什么时候写由本App 决定 —— 持有 `WRITE_SECURE_SETTINGS` 时自己写，没有时借 Shizuku 的
+ * shell 身份写。**这条路没开过时本App 对系统设置只读**，授权没了只能提示用户去系统无障碍列表手动打开
+ * （「划掉卡片」那条路径由服务声明 `feedbackAllMask` 挡住，根本不会被清）。
  */
 object AppState {
 
@@ -54,11 +54,11 @@ object AppState {
     }
 
     /**
-     * 「用 Shizuku 保持无障碍开启」：开着时，每次打开本App 会检查无障碍，
-     * 被系统关掉就让 Shizuku（shell 身份）把它写回来。
+     * 「用 Shizuku 保持无障碍开启」：开着时，每次打开本App 会检查无障碍，被关掉就把它写回来。
      *
      * **默认关** —— 关着的时候本App 对系统设置只读，与没装 Shizuku 时行为完全一致；
-     * 这一条是用户亲手打开的知情选择，也是 [ShizukuA11y] 唯一的触发前提。
+     * 这一条是用户亲手打开的知情选择：引导页那个动作按钮按一次就置位（见 `ui/ShizukuGuideScreen.kt`
+     * 的 `runOne`），也是 [ShizukuA11y] 唯一的触发前提。
      */
     fun isShizukuKeep(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_SHIZUKU_KEEP, false)
 

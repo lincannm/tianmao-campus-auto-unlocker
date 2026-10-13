@@ -84,7 +84,6 @@ fun SettingsScreen(
     }
     // 有没有那条"自己就能写"的权限：有的话就不靠 Shizuku 在跑（见 ShizukuA11y.ensureEnabled）。
     val canWriteSecure = remember(resumeTick, now) { ShizukuA11y.hasWriteSecureSettings(ctx) }
-    val autoKeepOk = shizukuKeep && a11yOn && (shizukuReady || canWriteSecure)
     val remainingMs = remember(resumeTick, now) { Session.remainingMs(ctx) }
     val logs = remember(resumeTick, now) { Session.snapshot() }
     // 两个「代按开锁」开关：界面上「打开 App」在前、「小部件」在后。
@@ -110,34 +109,26 @@ fun SettingsScreen(
                     okText = stringResource(R.string.set_a11y_on),
                     badText = stringResource(R.string.set_a11y_off)
                 )
-                // ⭐ 第二只胶囊只在用户开过「用 Shizuku 保持无障碍开启」之后才出现：
-                // 它回答的是「**此刻**有没有人在替我维持无障碍」。
-                //
-                // 判"不达标"有三种，按"用户还来不来得及救"排序说：
-                // ① 无障碍没开、但**还能写**（有那条一次性权限，或 Shizuku 在跑）—— 下次打开本App 就自己开，
-                //    所以下面补一句提示，别让它看起来像要用户去手动开；
-                // ② 无障碍没开、Shizuku 也没在跑 —— 要去把它的服务启动起来才会好；
-                // ③ 无障碍开着，但两条写回路径都不通 —— 一被清掉就没人补，得去引导页看看缺哪一步。
-                // ⚠️ 不做成"已开启"这种中性态：那只胶囊就只有 ok / 不 ok 两种样子（见 StatusChip），
-                //    而"这条机制开着"并不等于"此刻受保护"。
+                // ⭐ 第二只胶囊只在用户按过引导页那只按钮之后才出现，而且它**只回答一个问题**：
+                // 「无障碍万一被关掉，会不会自动打开」—— 当前无障碍开着没有由上面那只胶囊说，这里不重复，
+                // 所以"不 ok"只有一个条件：两条写回路径都不通（Shizuku 没就绪，也没拿到那条写回权限）。
                 if (shizukuKeep) {
                     val canRecover = shizukuReady || canWriteSecure
                     Spacer(Modifier.height(6.dp))
                     StatusChip(
-                        ok = autoKeepOk,
+                        ok = canRecover,
                         okText = stringResource(R.string.set_auto_keep_on),
-                        badText = stringResource(
-                            when {
-                                !a11yOn && canRecover -> R.string.set_auto_keep_a11y_off
-                                !a11yOn -> R.string.set_auto_keep_not_running
-                                else -> R.string.set_auto_keep_no_path
-                            }
-                        )
+                        badText = stringResource(R.string.set_auto_keep_not_running)
                     )
-                    // 无障碍关着但还能自愈：把"接下来会自己好"说清楚。
+                    // 无障碍关着但还能自愈：把"接下来会自己好"说清楚，别让它看起来要用户去手动开。
                     if (!a11yOn && canRecover) {
                         Spacer(Modifier.height(6.dp))
                         HintText(stringResource(R.string.set_auto_keep_armed))
+                    }
+                    // 两条路都不通：指路到同一张卡下面那个引导页入口。
+                    if (!canRecover) {
+                        Spacer(Modifier.height(6.dp))
+                        HintText(stringResource(R.string.set_auto_keep_no_path))
                     }
                 }
                 // 设置里开着、服务却没连上：说明服务被系统杀了还没绑回来，
@@ -178,7 +169,7 @@ fun SettingsScreen(
 
                 // ⭐ 「了解本App」**下面**的第二个入口：Shizuku 那条路（可选增强）。
                 // 只放一个按钮、点进独立的引导页 —— 那里才有装 Shizuku / 开开发者模式 /
-                // 启动服务 / 授权 / 打开开关的完整说明与视频、路径图。
+                // 启动服务 / 授权 / 把这条路打开的完整说明与视频、路径图。
                 Spacer(Modifier.height(12.dp))
                 OutlinedActionButton(
                     text = stringResource(R.string.shz_entry_btn),

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.SystemClock
 import android.util.Log
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -124,20 +125,48 @@ object Session {
     /**
      * 记一条动作。
      *
-     * 除了界面上的内存日志，**同时打到 logcat**（tag `UnlockAssistant`）：
-     * 排查时经常是 App 已经跳走了、界面日志看不到，只能靠 logcat
-     * （例如「到底是拦下了还是照旧抛了 deep link」这种判定）。
-     * 内存日志跨进程重启会丢，logcat 不会。
+     * 三个去处：界面上的内存日志、**logcat**（tag `UnlockAssistant`）、以及
+     * [attachLogFile] 接上的那个文件（`files/session.log`）。
      *
-     * 时间戳**只加在界面日志上**：logcat 自己每行都带时间，再加一遍只会更难读。
+     * 为什么要落盘：有些 ROM 会把第三方 App 自己打的 logcat 行滤掉（本机这台 HyperOS 上实测：
+     * 同一个进程的框架日志有 73 行，而 `UnlockAssistant:` 一行都没有），那时 logcat 就不再是证据了。
+     * 文件在本App 私有目录里，debug 包用 `run-as … cat files/session.log` 就能读。
+     *
+     * 时间戳**只加在界面日志与文件上**：logcat 自己每行都带时间，再加一遍只会更难读。
      */
     fun addLog(msg: String) {
         Log.i(TAG, msg)
         val stamp = stampFmt.get()?.format(Date()) ?: ""
+        val line = if (stamp.isEmpty()) msg else "$stamp  $msg"
         synchronized(log) {
-            log.addLast(if (stamp.isEmpty()) msg else "$stamp  $msg")
+            log.addLast(line)
             while (log.size > LOG_MAX) log.removeFirst()
         }
+        logFile?.let { f ->
+            try {
+                // 只保留最近一段：文件太大就从头开始，别让它无限长。
+                if (f.length() > LOG_FILE_MAX_BYTES) f.writeText("")
+                f.appendText(line + "\n")
+            } catch (t: Throwable) {
+                // 落盘只是排查手段，写不进去不影响任何行为（也不许影响）。
+            }
+        }
+    }
+
+    /** 落盘用的日志文件；`null` = 还没接上，就不落盘。 */
+    @Volatile
+    private var logFile: File? = null
+
+    /** 落盘文件的上限，超过就清空重来。 */
+    private const val LOG_FILE_MAX_BYTES = 256L * 1024
+
+    /**
+     * 把本App 私有目录里的 `files/session.log` 接上（Activity 与无障碍服务各调一次，幂等）。
+     * 不调也完全没问题 —— 那样就只有 logcat 与界面日志。
+     */
+    fun attachLogFile(ctx: Context) {
+        if (logFile != null) return
+        logFile = File(ctx.applicationContext.filesDir, "session.log")
     }
 
     fun snapshot(): List<String> = synchronized(log) { log.toList() }

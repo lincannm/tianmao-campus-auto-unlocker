@@ -65,59 +65,53 @@
       （`ui/ShizukuGuideScreen.kt`）—— 小白用户不该在两个页面里各读一段说明书。
       四件事必须说清楚：①这条路是可选的，不装 Shizuku 走「去系统设置里开」那条老路；
       ②**装没装不由本App 检测**（包可见性查不准），所以这一页永远给一个 GitHub Releases 的下载直链，
-      状态只看「服务在不在跑」；③Shizuku 服务在非 root 机上**重启手机后要重新启动一次**，
-      那之后本App 也写不了；④开发者模式怎么开各品牌不一样，所以附了一张可以点开放大的路径图 + 一个视频教程。
+      状态只看「服务在不在跑」；③Shizuku 的服务**配对过一次之后，打开 Shizuku 它就会自己启动**
+      （重启手机也一样），所以文案不许写成"每次重启都要重走一遍"；
+      ④开发者模式怎么开各品牌不一样，所以附了一张可以点开放大的路径图 + 一个视频教程。
       ⭐ 「由谁写」的措辞不许含糊：读设置、算该写什么、发起调用都是本App 做的，Shizuku 只出借
       shell 身份跑那条 `settings put` 命令 —— 别写成「写这件事全交给 Shizuku」。
+      ⭐ 状态卡里**只有一只动作按钮**，而且**文案固定不变**（`shz_btn_one`）——
+      当前缺哪一步不看按钮名字，只看上面的状态胶囊；真的走不下去时，**按下按钮之后才弹窗**说清是哪一种
+      （服务没在跑 → `dlg_shz_off_*` 弹窗；还没授权 → 弹 Shizuku 自己的授权框）。
+      这一页**没有"关掉保持"的开关**：引导页只负责把这条路打开。
     -->
     <string name="shz_entry_btn">通过Shizuku开启无障碍（推荐）</string>
     <string name="shzg_title">通过 Shizuku 开启无障碍</string>
-    <string name="shzg_lead">本App 靠无障碍自动跳过天猫校园的广告。有些手机在把本App 清理掉（强制停止）之后，会顺手把无障碍一起关掉，那时广告就不会自动跳过了。\n\n装了 Shizuku 之后，本App 每次打开时会自己把无障碍写回来：要写什么由本App 算（把我们自己那一项补进无障碍列表），Shizuku 只出借它的系统身份帮忙执行写回命令。本App 自己不申请任何特权权限，也一直没申请过。</string>
-    <string name="shzg_no_shizuku">不装 Shizuku 也能用：无障碍被关掉后，去手机的「设置 → 无障碍 / 辅助功能」里手动打开「开锁」即可。</string>
+    <string name="shzg_lead">在本界面使用 Shizuku 打开无障碍权限并维持（获取 WRITE_SECURE_SETTINGS 权限）后，本App 每次打开时检查一遍无障碍，如果被系统关掉了就自己写回来，防止无障碍权限频繁丢失。</string>
+    <string name="shzg_no_shizuku">如果不装 Shizuku 也能用：无障碍被关掉后，去手机的「设置 → 无障碍 / 辅助功能」里手动打开「开锁」即可。</string>
     <string name="shz_state_ready">Shizuku 已就绪</string>
+    <string name="shz_state_ready_no_shizuku">已就绪 · 写回不用 Shizuku 在跑</string>
     <string name="shz_state_not_running">Shizuku 没在运行</string>
     <string name="shz_state_no_permission">还没允许「开锁」使用 Shizuku</string>
-    <string name="shz_hint_not_running">装好之后要在 Shizuku 里把服务启动起来；已经装过就点下面的「打开 Shizuku」。本App 重启手机后也要再启动一次。</string>
-    <string name="shz_hint_no_permission">点「去授权」，在 Shizuku 弹出的窗口里允许「开锁」使用它。</string>
-    <string name="shz_btn_open">打开 Shizuku</string>
-    <string name="shz_btn_grant">去授权</string>
-    <!-- 这个按钮是「一条路」而不是一个偏好：点下去 = 立刻写一次 + 以后每次打开本App 都自检并写回。 -->
-    <string name="shz_btn_keep">用 Shizuku 保持无障碍开启</string>
-    <string name="shz_btn_keep_and_enable">用 Shizuku 开启无障碍并保持</string>
-    <string name="shz_keep_desc">点一下就会把无障碍开启，并且以后每次打开本App 都会自检、被关掉就写回来。想停掉就去这一页把上面的开关关掉。</string>
-    <string name="shz_switch">用 Shizuku 保持无障碍开启</string>
-    <string name="shz_switch_desc">打开后，每次打开本App 都会检查一遍：无障碍被关掉了就自己写回来。</string>
-    <string name="shz_done">已用 Shizuku 把无障碍打开</string>
-    <string name="shz_failed">Shizuku 没能打开无障碍，请去系统设置里手动打开</string>
+    <!-- 这一页唯一那只按钮：**文案固定**，不许按状态改名（当前缺哪一步由状态胶囊说，按下之后才弹窗）。 -->
+    <string name="shz_btn_one">使用Shizuku开启无障碍</string>
+    <string name="shz_keep_desc">点一下就会把无障碍开启，并且以后每次打开本App 都会自动检查、被关掉就写回来。</string>
+    <string name="shz_done">已开启自动维持</string>
+    <string name="shz_failed">没能成功，请去系统设置的无障碍 / 辅助功能里手动打开「开锁」</string>
     <string name="shz_download_failed">打不开浏览器 · 下载地址：github.com/thedjchi/Shizuku/releases</string>
 
-    <!-- 一次性授权：拿到之后本App 自己就能写回，不需要 Shizuku 在旁边。 -->
-    <string name="shz_perm_ok">写回权限已就绪</string>
-    <string name="shz_perm_missing">还没获得写回权限</string>
-    <string name="shz_perm_hint">无障碍被系统关掉之后，本App 要靠这条权限自己把它开回来。</string>
-    <string name="shz_perm_btn">用 Shizuku 授权（一次就够）</string>
-    <string name="shz_perm_done">已授权：以后写回不再依赖 Shizuku 在运行</string>
-    <string name="shz_perm_failed">授权失败：先启动 Shizuku 的服务，或改用下面的老办法</string>
-    <!-- Shizuku 服务没在运行时的弹窗（用户要求：别只给一行小字，要当面给一个启动入口）。 -->
-    <string name="dlg_shz_off_title">Shizuku 的服务没在运行</string>
-    <string name="dlg_shz_off_body">这一步要用到 Shizuku。它在非 root 手机上每次重启或停止之后都要重新启动一次。\n\n点下面的按钮打开 Shizuku，照它页面上的提示把服务启动起来，再回到本页。</string>
+    <!-- 按下按钮、探到"用不了"时弹的框（用户要求：别只给一行小字，要当面给一个启动入口）。
+         ⚠️ 本App 不检测「装没装」（包可见性查不准），所以正文把"没装"那一半也写明 ——
+         那个按钮找不到 Shizuku 的启动入口时会退回下载页，用户不会走进死胡同。 -->
+    <string name="dlg_shz_off_title">Shizuku 没在运行</string>
+    <string name="dlg_shz_off_body">点下面的按钮打开 Shizuku，直到看见「Shizuku 正在运行」：如果已配对，打开它服务就会自己启动；没装的话，这个按钮会打开下载页。</string>
     <string name="dlg_shz_off_go">打开 Shizuku</string>
     <string name="dlg_shz_off_later">稍后</string>
 
-    <!-- 设置面板第二只胶囊：顶部的「无障碍已开启」旁边再说一句"它靠 Shizuku 自动维持"。
-         胶囊只有 ok / 不 ok 两种样子，所以"不 ok"只留给**当下确实维持不住**的两种情况。 -->
-    <string name="set_auto_keep_on">无障碍自动维持中</string>
-    <string name="set_auto_keep_not_running">自动维持开着 · 需要 Shizuku 帮一次忙</string>
-    <string name="set_auto_keep_a11y_off">无障碍未开启</string>
-    <string name="set_auto_keep_armed">Shizuku 已就绪：下次打开本App 会自动把无障碍开启。</string>
-    <string name="set_auto_keep_no_path">自动维持已开 · 但现在写不回（去引导页看看）</string>
+    <!-- 设置面板第二只胶囊（只在用户按过引导页那只按钮之后出现）：它**只回答一个问题**
+         ——「无障碍万一被关掉，会不会自动打开」，当前无障碍开着没有由上面那只胶囊说，这里不重复。
+         所以"不 ok"只有一个条件：两条写回路径都不通（Shizuku 没就绪，也没拿到那条写回权限）。 -->
+    <string name="set_auto_keep_on">无障碍被关掉时会自动打开</string>
+    <string name="set_auto_keep_not_running">自动打开暂时用不了（Shizuku 没就绪）</string>
+    <string name="set_auto_keep_armed">无障碍现在是关着的：下次打开本App 会自动打开。</string>
+    <string name="set_auto_keep_no_path">点下面那个「通过Shizuku开启无障碍（推荐）」，把 Shizuku 处理好就能自动打开了。</string>
 
     <!-- 引导页：四步 + 视频教程 + 开发者模式路径图（图可点开全屏放大）。 -->
     <string name="shzg_steps_title">一共四步</string>
     <string name="shzg_step1">装 Shizuku：它是免费开源的小工具，点上面那个按钮下载（也可以先看下面的视频教程）。</string>
     <string name="shzg_step2">打开「开发者模式」：在手机的「设置」里进「关于手机」（有的系统叫「我的设备 → 全部参数」），连续点「版本号」7 次，提示「您已处于开发者模式」就成了 —— 各品牌的路径见下面那张图。</string>
-    <string name="shzg_step3">启动 Shizuku 的服务：打开 Shizuku，照它页面上的提示做（要开一次「无线调试」，有的教程用电脑）。⚠️ 手机重启后要再启动一次。</string>
-    <string name="shzg_step4">回到本页：先「去授权」，再点「用 Shizuku 开启无障碍并保持」—— 这一步会直接把无障碍打开，并且以后每次打开本App 都会自检、被关掉就写回来。</string>
+    <string name="shzg_step3">启动 Shizuku 的服务：第一次要照它的提示配对（开一次「无线调试」，有的教程用电脑）；配过一次之后，以后打开 Shizuku 它就会自己启动，重启手机也一样。</string>
+    <string name="shzg_step4">回到本页，点「使用Shizuku开启无障碍」：之后无障碍被系统关掉时，本App 会自己写回来。</string>
     <string name="shzg_btn_download">下载 Shizuku（GitHub Releases）</string>
     <string name="shzg_video_title">视频教程（B 站）</string>
     <string name="shzg_video_body">【Shizuku保姆级激活教学，看完不会我吃】：从下载到启动服务，一步步演示。</string>
@@ -148,6 +142,12 @@
     <string name="dlg_a11y_body">无障碍负责跳过天猫校园的开屏广告。\n\n现在打开天猫校园，开屏广告不会被自动跳过，得你自己跳过。</string>
     <string name="dlg_a11y_go">去开启</string>
     <string name="dlg_a11y_anyway">仍打开天猫校园</string>
+    <!--
+      另一种失效：用户拨的开关是开着的，但无障碍服务没连上（强停之后框架会把服务记成 crashed
+      并不再重绑）。这时不能照旧跳转 —— 跳过去路上的弹窗没人点，用户看到的就是"没反应"。
+    -->
+    <string name="dlg_a11y_stale_title">无障碍没在跑</string>
+    <string name="dlg_a11y_stale_body">系统设置里「开锁」是开着的，但无障碍服务此刻没有连上 —— 这样跳过去，路上的弹窗没人点。\n\n去「无障碍 / 辅助功能」里把「开锁」关掉再打开，通常就能修好；重装一次本App 也可以。</string>
 
     <string name="dlg_notmall_title">没装天猫校园</string>
     <string name="dlg_notmall_body">本工具靠天猫校园的门锁页开门。\n请先装好天猫校园再试。</string>
