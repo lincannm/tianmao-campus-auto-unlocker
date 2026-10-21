@@ -18,6 +18,7 @@ import android.view.accessibility.AccessibilityNodeInfo
  *  1. 只在「自动跳过弹窗」的时间窗（90 秒，见 [Session]）内动作，窗一过就完全静默；
  *  2. 只在前台窗口属于白名单包时动作；
  *  3. 天猫校园里只点「跳过 / 关闭 / 暂不」类控件；
+ *     全屏广告窗口（广告 SDK 的 Activity）里没有可点文案时按返回键退回上一页；
  *     MIUI 的「启动应用」唤醒确认框**单独一套规则**，且必须先验明弹窗身份才点「允许」。
  *
  * 代按开锁：只有这次跳转**开着**对应入口开关才置位授权标志
@@ -44,6 +45,12 @@ class UnlockAccessibilityService : AccessibilityService() {
         /** 「看到开锁控件但没授权」这条日志的节流（同一页面别刷屏）。 */
         private const val UNLOCK_SEEN_LOG_MS = 10_000L
 
+        /** 广告窗口里按返回键的间隔：按一次多半就退回去了，留出看"确认退出"框的时间。 */
+        private const val AD_BACK_COOLDOWN_MS = 1_200L
+
+        /** 同一个广告窗口最多按几次返回键（防"按了没用"时无限按）。 */
+        private const val AD_BACK_MAX = 3
+
         const val TMALL_PKG = "com.tmall.campus.and"
         const val MIUI_SECURITY_PKG = "com.miui.securitycenter"
 
@@ -67,6 +74,11 @@ class UnlockAccessibilityService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     private var unlockPollUntil = 0L
     private var polling = false
+
+    /** 当前这个广告窗口的 Activity 类名；`null` = 不在广告窗口里。 */
+    private var adWindowClass: String? = null
+    private var adBackAt = 0L
+    private var adBackCount = 0
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -113,9 +125,13 @@ class UnlockAccessibilityService : AccessibilityService() {
         val isMiui = pkg == MIUI_SECURITY_PKG
         if (!isMiui && pkg !in GENERIC_PACKAGES) return
 
-        // 3) 节流
         val now = SystemClock.uptimeMillis()
-        if (now - lastScanAt < SCAN_THROTTLE_MS) return
+
+        // 广告窗口的记账放在节流之前：窗口切换事件只来一次，正好撞进节流窗口就丢了。
+        val isAdEvent = !isMiui && trackAdWindow(event)
+
+        // 3) 节流（广告窗口切换不受它限制：丢了这一次就没人关那只广告了）
+        if (!isAdEvent && now - lastScanAt < SCAN_THROTTLE_MS) return
         lastScanAt = now
 
         val root = try {
@@ -129,13 +145,75 @@ class UnlockAccessibilityService : AccessibilityService() {
             if (isMiui) {
                 handleMiuiStartConfirm(root, now)
             } else {
-                // 一次事件只做一件事：先清弹窗；没弹窗可清时才轮到代按开锁。
-                if (!scanAndClick(root, now)) tryUnlock(root, now)
+                // 一次事件只做一件事：先按文案清弹窗；广告窗口里没文案可点就按返回键；
+                // 都不是才轮到代按开锁。
+                if (!scanAndClick(root, now)) {
+                    if (isAdEvent) closeAdWindow(now) else tryUnlock(root, now)
+                }
                 if (Session.isUnlockArmed(this)) startUnlockPolling(now)
             }
         } catch (t: Throwable) {
             Log.w(TAG, "scan failed: ${t.message}")
         }
+    }
+
+    // ------------------------------------------------------------------
+    // 全屏广告窗口（点开锁之后弹出来的那种）
+    // ------------------------------------------------------------------
+
+    /**
+     * 记住这件事是不是「广告窗口刚切到前台」，返回值就是判据。
+     *
+     * 判据：`TYPE_WINDOW_STATE_CHANGED` 事件的类名落在广告 SDK 的包下（见
+     * [PopupRules.AD_ACTIVITY_PREFIXES]）；切回任何普通页面就把状态清掉。
+     *
+     * **只在窗口切换事件上动手**（不在后续的 content-changed 上补按）：广告退回去时
+     * 底下的门锁页会发一次正常的窗口切换，状态随即清掉；若拿 content-changed 补按，
+     * 一旦那一次切换没来，返回键就会按到门锁页上。
+     */
+    private fun trackAdWindow(event: AccessibilityEvent): Boolean {
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return false
+        val cls = event.className?.toString().orEmpty()
+        if (!PopupRules.isAdWindow(cls)) {
+            adWindowClass = null
+            return false
+        }
+        if (cls != adWindowClass) {
+            adBackAt = 0L
+            adBackCount = 0
+        }
+        adWindowClass = cls
+        return true
+    }
+
+    /**
+     * 用返回键关掉广告窗口。
+     *
+     * 为什么是返回键：这类窗口的关闭按钮常是**没有文字、没有无障碍描述**的纯图标
+     * （实测 `TTFullScreenVideoActivity` 的 × 就是一只 ImageView），文案规则匹配不到；
+     * 而广告 Activity 都压在门锁页之上，返回键只会退回门锁页 —— 既不盲点坐标，
+     * 也不会把广告主的落地页拉起来。有的 SDK 会先弹「放弃奖励离开 / 继续观看」的确认框，
+     * 那一支由 [PopupRules.ALLOW] 里的两条文案点掉。
+     */
+    private fun closeAdWindow(now: Long) {
+        val cls = adWindowClass ?: return
+        if (adBackCount >= AD_BACK_MAX) return
+        if (now - adBackAt < AD_BACK_COOLDOWN_MS) return
+        adBackAt = now
+        adBackCount++
+        val ok = try {
+            performGlobalAction(GLOBAL_ACTION_BACK)
+        } catch (t: Throwable) {
+            false
+        }
+        val simple = cls.substringAfterLast('.')
+        val msg = if (ok) {
+            "关闭广告窗口：$simple（返回键）"
+        } else {
+            "关闭广告窗口：$simple（返回键没发出去）"
+        }
+        Session.addLog(msg)
+        Log.i(TAG, "$msg ok=$ok")
     }
 
     override fun onDestroy() {

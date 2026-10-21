@@ -305,7 +305,9 @@ object ShizukuA11y {
      *
      * 三种输入状态分别处理：
      *  1. 设置里没有我们（强停清掉了授权）→ 走 [ensureEnabled] 那两步写回；
-     *  2. 设置里有我们、服务却没连上 → [rebind]：把我们那一项摘掉再写回来，逼框架重新绑一次；
+     *  2. 设置里有我们、服务却没连上，或**总开关 `accessibility_enabled` 是关的** → [rebind]：
+     *     把我们那一项摘掉再写回来，逼框架重新绑一次（总开关关着那种尤其要走这条：
+     *     只把总开关写成 1 并不会把停在 `Crashed services` 里的我们重新绑上）；
      *  3. 已经连着 → 立刻返回 true，不动系统设置。
      *
      * ⚠️ **耗时操作**（会 sleep 等绑定、可能起远端进程），调用方必须放在 IO 线程。
@@ -315,10 +317,11 @@ object ShizukuA11y {
     fun ensureConnected(ctx: Context, timeoutMs: Long = CONNECT_TIMEOUT_MS): Boolean {
         if (UnlockAccessibilityService.running) return true
 
-        if (!AppState.isAccessibilityEnabled(ctx) || AppState.selfA11yComponent(ctx) !in listedComponents(readEnabledServices(ctx))) {
+        val listed = AppState.selfA11yComponent(ctx) in listedComponents(readEnabledServices(ctx))
+        if (!listed) {
             ensureEnabled(ctx, timeoutMs)
-        } else if (!waitConnected(COLD_BIND_GRACE_MS)) {
-            rebind(ctx, timeoutMs)
+        } else if (!AppState.isAccessibilityMasterOn(ctx) || !waitConnected(COLD_BIND_GRACE_MS)) {
+            if (!rebind(ctx, timeoutMs)) ensureEnabled(ctx, timeoutMs)
         }
         val connected = waitConnected(timeoutMs)
         if (!connected) {

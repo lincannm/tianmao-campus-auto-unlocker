@@ -73,10 +73,15 @@ object AppState {
     /**
      * 无障碍服务是否已开启。
      *
-     * **唯一权威来源是系统设置** `Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES`，
-     * 即「设置 → 无障碍」里开关的那一项。
+     * **两个系统设置都要满足**，缺一个都不算开：
+     * 1. `Settings.Secure.ACCESSIBILITY_ENABLED` = 1 —— 系统无障碍的**总开关**
+     *    （「设置 → 无障碍」页首那一只）。它为 0 时框架根本不绑任何服务，
+     *    此时 `ENABLED_ACCESSIBILITY_SERVICES` 里**仍然留着我们的条目**（强停 / 服务进程
+     *    非正常死亡之后就是这样），只看那一项会把「全局已关、什么都点不了」误判成「开着」；
+     * 2. `Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES` 里有我们这一项 ——
+     *    即「设置 → 无障碍 → 已下载的服务」里那只开关。
      *
-     * 这一项里每个服务是一段 `包名/类名` 文本，而**类名有两种合法写法**：全名 `包名.类名`
+     * 第 2 项里每个服务是一段 `包名/类名` 文本，而**类名有两种合法写法**：全名 `包名.类名`
      * 与短名 `.类名`（省略掉与包名相同的部分）。系统里存哪一种由写入方决定，同一个服务
      * 换个写法字面就不相等 —— 所以必须解析成组件再比，**不许拿字符串逐字比**：
      * 系统里存短名时会把自己判成「未开启」，于是拦下跳转、胶囊显示未开启。
@@ -87,6 +92,7 @@ object AppState {
      * **不能用来否决系统设置**。
      */
     fun isAccessibilityEnabled(ctx: Context): Boolean {
+        if (!isAccessibilityMasterOn(ctx)) return false
         val raw = try {
             Settings.Secure.getString(
                 ctx.contentResolver,
@@ -97,6 +103,17 @@ object AppState {
         } ?: return false
         val self = selfA11yComponent(ctx)
         return raw.split(':').any { ComponentName.unflattenFromString(it.trim()) == self }
+    }
+
+    /** 系统无障碍的**总开关**（`ACCESSIBILITY_ENABLED`）；读不到就按关处理。 */
+    fun isAccessibilityMasterOn(ctx: Context): Boolean = try {
+        Settings.Secure.getInt(
+            ctx.contentResolver,
+            Settings.Secure.ACCESSIBILITY_ENABLED,
+            0
+        ) == 1
+    } catch (t: Throwable) {
+        false
     }
 
     /**

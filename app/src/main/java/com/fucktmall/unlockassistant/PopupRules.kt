@@ -7,6 +7,7 @@ package com.fucktmall.unlockassistant
  * MIUI「启动应用」唤醒确认弹窗。规则覆盖的原文（`\s*` 是为了容忍按钮里的空格）：
  *   跳过 / 跳过｜5 / 跳过广告 %1$d / 跳过 %1$d / %1$d 跳过
  *   关闭广告 / 轻点关闭 / 点击关闭按钮 / 广告将会在_SEC_秒后关闭
+ *   放弃奖励离开 / 坚持退出（全屏广告按返回键之后的「确认退出」框）
  *   暂不安装 / 去升级 / 继续升级 / 升级提醒 / 检查更新
  *   您有新版本可以更新，请问需要更新吗 / 已经给您准备了新版本的{app_name}，是否安装
  *   取消升级，将无法使用{app_name}
@@ -31,7 +32,9 @@ object PopupRules {
         Regex("^关\\s*闭\\s*广\\s*告$"),
         Regex("^轻\\s*点\\s*关\\s*闭$"),
         Regex("^点\\s*击\\s*关\\s*闭\\s*按\\s*钮$"),
-        Regex("^\\s*[×xX✕✖]\\s*$"),
+        // 只认排版符号 × ✕ ✖，**不认拉丁字母 x / X**：有的页面拿 "X" 当 X（Twitter）的入口，
+        // 点上去会把桌面那只 App 拉起来（用户真机踩过）。
+        Regex("^\\s*[×✕✖]\\s*$"),
         // 更新弹窗的「不要更新」一侧
         Regex("^暂\\s*不\\s*安\\s*装$"),
         Regex("^暂\\s*不\\s*更\\s*新$"),
@@ -45,7 +48,11 @@ object PopupRules {
         Regex("^我\\s*知\\s*道\\s*了$"),
         Regex("^下\\s*次\\s*再\\s*说$"),
         Regex("^不\\s*再\\s*提\\s*示$"),
-        Regex("^不\\s*再\\s*提\\s*醒$")
+        Regex("^不\\s*再\\s*提\\s*醒$"),
+        // 全屏广告的「离开」确认：按返回键后穿山甲 / 个推会弹一只框，
+        // 一边是「继续观看」，另一边就是这两句。只出现在广告的退出框里。
+        Regex("^放\\s*弃\\s*奖\\s*励\\s*离\\s*开$"),
+        Regex("^坚\\s*持\\s*退\\s*出$")
     )
 
     /**
@@ -91,6 +98,40 @@ object PopupRules {
         "启动应用",
         "想要打开"
     )
+
+    // ------------------------------------------------------------------
+    // 全屏广告窗口（点开锁之后弹的那种）
+    //
+    // 判据只有一条：**窗口的 Activity 类名落在广告 SDK 的包下**。清单里这些 SDK 的 Activity
+    // 全都在，闭集可枚举（来源：`aapt2 dump xmltree AndroidManifest.xml`，见
+    // `work/v23/ad_activities.txt`）：
+    //   穿山甲 Pangle   com.bytedance.sdk.openadsdk.…
+    //   任意 Think/Taku com.anythink.…
+    //   广点通 GDT      com.qq.e.…
+    //   快手 Kwad       com.kwad.…
+    //   个推 smartdigimkt com.smartdigimkt.…
+    //
+    // 这类窗口里的「关闭 / 跳过」常常是个**没有文字、也没有无障碍描述**的图标按钮
+    // （实测 `TTFullScreenVideoActivity` 的 × 就是一只纯 ImageView，见
+    // `work/v23/gkd_snapshot/snapshot.json`），文案规则匹配不到。所以对它们用
+    // **返回键**关：广告 Activity 都在门锁页之上，返回键只会退回门锁页，
+    // 既不会盲点坐标、也不会把广告主的落地页拉起来。
+    // ------------------------------------------------------------------
+
+    /** 广告 SDK 的 Activity 包前缀（全部出自天猫校园 5.7.2 的清单）。 */
+    val AD_ACTIVITY_PREFIXES: List<String> = listOf(
+        "com.bytedance.sdk.openadsdk.",
+        "com.anythink.",
+        "com.qq.e.",
+        "com.kwad.",
+        "com.smartdigimkt."
+    )
+
+    /** 这个 Activity 类名是不是广告窗口。 */
+    fun isAdWindow(className: CharSequence?): Boolean {
+        val name = className?.toString() ?: return false
+        return AD_ACTIVITY_PREFIXES.any { name.startsWith(it) }
+    }
 
     // ------------------------------------------------------------------
     // 门锁页的「点击开锁」控件（天猫校园 5.7.2 / HyperOS OS3.0 / 1280×2772）
