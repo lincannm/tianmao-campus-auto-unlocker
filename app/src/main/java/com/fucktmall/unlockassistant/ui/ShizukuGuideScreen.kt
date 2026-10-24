@@ -86,8 +86,8 @@ private const val ZOOM_DOUBLE_TAP = 2.5f
  * 这些步骤写在向导/设置里既挤（向导首屏会被顶下去），又容易变成两份对不上的说法。
  * 于是那两个页面**只留一个按钮**，点进来才是这一页，而且这一页假定读者**完全没听说过 Shizuku**。
  *
- * 页面顺序：一句话讲清这是干什么的（页头副标题）→ 我现在到哪一步（状态胶囊 + 一只动作按钮 +
- * 常显的下载入口）→ 不装 Shizuku 的兜底 → 「第一次怎么装」（三步 + 开发者模式路径图 + 视频教程）。
+ * 页面顺序：标题（页头**只有标题**）→ 一句话讲清这是干什么的（普通正文）→ 我现在到哪一步（状态胶囊 +
+ * 一只动作按钮 + 常显的下载入口）→ 不装 Shizuku 的兜底 → 「第一次怎么装」（三步 + 开发者模式路径图 + 视频教程）。
  * ⭐ 最后那一整块**就绪时默认收起**：状态已经就绪（本页最常见的样子）时，那三步对用户是纯噪音；
  * 没就绪时默认摊开，因为那正是他当下要做的事。收起 / 展开随时可点。
  *
@@ -95,6 +95,9 @@ private const val ZOOM_DOUBLE_TAP = 2.5f
  * 按钮不按状态改名；真走不下去时**按下之后才弹窗**说清是哪一种（服务没在跑 → [ShizukuOffDialog]，
  * 没授权 → Shizuku 自己的授权框）。都通了那一下就把那条一次性写回权限、立刻写一次、
  * 以及"以后每次打开本App 都自检写回"一起做掉。
+ *
+ * ⭐ **做完之后就没什么可做的了**：无障碍已经开着、自动维持也开着（[done]）时那只按钮**置灰**，
+ * 胶囊改说「无障碍已开启，并会自动维持」，免得用户以为还得再按一次。
  *
  * 三条与设备有关的实现约束：
  * 1. **不检测 Shizuku 装没装**（[ShizukuA11y.state] 只问 binder 与授权）：包可见性查不准，
@@ -124,6 +127,12 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
     // 这条路此刻能不能用：Shizuku 在跑就能借它的 shell 身份写；它没在跑、但本App 已经拿过
     // 那条一次性写回权限，也照样能写（第一档完全不经过 Shizuku，见 ShizukuA11y.ensureConnected）。
     val mechanismReady = state == ShizukuA11y.State.READY || canWrite
+
+    // 「这条路已经做完」的样子：无障碍开着 + 自动维持也已开 + 当下确实维持得住。
+    // 三者缺一都还值得让用户按一下（比如 Shizuku 没起来，按一下会去拉起它），所以按钮只在全满足时置灰。
+    val a11yOn = remember(resumeTick, tick) { AppState.isAccessibilityEnabled(ctx) }
+    val keepOn = remember(resumeTick, tick) { AppState.isShizukuKeep(ctx) }
+    val done = a11yOn && keepOn && mechanismReady
 
     // 「第一次怎么装」那块开不开：null = 跟着状态走（就绪收成一行、没就绪摊开），
     // 用户点过一次之后就按他点的算。
@@ -173,11 +182,8 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
     }
 
     Screen {
-        ScreenHeader(
-            title = stringResource(R.string.shzg_title),
-            subtitle = stringResource(R.string.shzg_lead),
-            onBack = onBack
-        )
+        // 页头**只有标题**：那句"这是干什么的"当普通正文摆在下面（页头副标题一行放不下长句）。
+        ScreenHeader(title = stringResource(R.string.shzg_title), onBack = onBack)
 
         Column(
             modifier = Modifier
@@ -186,16 +192,20 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
         ) {
+            BodyText(stringResource(R.string.shzg_lead))
+            Spacer(Modifier.height(14.dp))
+
             // 状态 + **一只文案固定**的按钮 + 常显的下载入口：胶囊说"现在什么情况 / 下一步做什么"，
             // 按钮永远叫「使用Shizuku开启无障碍」，走不下去时按下之后才弹窗解释（见 runOne）。
             StepCard {
                 StatusChip(
+                    // done 是"已经做完"那一态：胶囊不能再教用户点按钮，直接说现在的状态。
                     ok = mechanismReady,
                     okText = stringResource(
-                        if (state == ShizukuA11y.State.READY) {
-                            R.string.shz_state_ready
-                        } else {
-                            R.string.shz_state_ready_no_shizuku
+                        when {
+                            done -> R.string.shz_state_done
+                            state == ShizukuA11y.State.READY -> R.string.shz_state_ready
+                            else -> R.string.shz_state_ready_no_shizuku
                         }
                     ),
                     badText = stringResource(
@@ -209,9 +219,18 @@ fun ShizukuGuideScreen(resumeTick: Int, onBack: () -> Unit) {
                 Spacer(Modifier.height(10.dp))
 
                 // ⚠️ 这一只按钮的文案**不随状态变**（用户要求）：状态由上面的胶囊表达。
-                PrimaryButton(text = stringResource(R.string.shz_btn_one), onClick = runOne)
+                // 已经开启并自动维持时置灰 —— 再点一次不会多出任何效果。
+                PrimaryButton(
+                    text = stringResource(R.string.shz_btn_one),
+                    enabled = !done,
+                    onClick = runOne
+                )
                 Spacer(Modifier.height(6.dp))
-                HintText(stringResource(R.string.shz_keep_desc))
+                HintText(
+                    stringResource(
+                        if (done) R.string.shz_keep_desc_done else R.string.shz_keep_desc
+                    )
+                )
 
                 // 下载入口钉在状态卡最后一行、**任何状态都给**：本页不检测装没装
                 // （包可见性查不准，见 ShizukuA11y.state 的注释），

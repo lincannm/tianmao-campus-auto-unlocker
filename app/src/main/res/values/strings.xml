@@ -18,14 +18,28 @@
     <string name="wiz_done">完成</string>
 
     <string name="wiz_s1_title">开启无障碍</string>
-    <string name="wiz_s1_body">本App靠它自动跳过天猫校园的广告 / 更新弹窗。</string>
+    <string name="wiz_s1_body">本App靠它自动跳过天猫校园的广告 / 更新弹窗。\n下面两种方式选一种就行。</string>
     <string name="wiz_s1_on">无障碍已开启</string>
     <string name="wiz_s1_off">还没开启，广告不会被跳过</string>
-    <string name="wiz_s1_btn">去开启</string>
+    <string name="wiz_s1_btn">去系统设置里开启</string>
 
-    <!-- 开启教程：系统的无障碍页和服务列表在不同机型上叫法不同，所以两个名字都写。 -->
-    <string name="wiz_s1_tut_title">怎么开启</string>
-    <string name="wiz_s1_tut_1">点上面的「去开启」；如果没跳过去，就自己打开手机的「设置」进「无障碍」或「辅助功能」。</string>
+    <!--
+      第 1 步卡里是**两条并列的路**（分开写、选一条走）：方式一 = 用 Shizuku（推荐），
+      方式二 = 普通方法（去系统设置里手动打开）。两条都只是入口：
+      方式一进独立引导页、方式二跳系统设置页，真正的步骤在卡外的教程卡里。
+    -->
+    <string name="wiz_s1_part1_title">方式一 · 用 Shizuku 开启（推荐）</string>
+    <string name="wiz_s1_part1_body">装一次免费小工具 Shizuku：以后系统把无障碍关掉，本App 会自己打开回来。</string>
+    <string name="wiz_s1_part1_btn">用 Shizuku 开启无障碍</string>
+    <string name="wiz_s1_part1_hint">点进去有安装、启动和开启的完整说明与视频。</string>
+    <string name="wiz_s1_part2_title">方式二 · 普通方法：去系统设置里开启</string>
+    <string name="wiz_s1_part2_body">不用装任何东西；被系统关掉后，要自己回来重新打开。</string>
+    <string name="wiz_s1_part2_done">无障碍已经开着了，这一种不用再点。</string>
+
+    <!-- 开启教程：系统的无障碍页和服务列表在不同机型上叫法不同，所以两个名字都写。
+         标题点名「方式二」，因为第 1 步卡里还有一条 Shizuku 的路，这份教程只讲手动那条。 -->
+    <string name="wiz_s1_tut_title">方式二：在系统设置里怎么开</string>
+    <string name="wiz_s1_tut_1">点上面那个「去系统设置里开启」；如果没跳过去，就自己打开手机的「设置」进「无障碍」或「辅助功能」。</string>
     <string name="wiz_s1_tut_2">往下找到「已下载的应用 / 已安装的服务」。</string>
     <string name="wiz_s1_tut_3">在列表里找到「开锁」，点进去并打开它。</string>
     <string name="wiz_s1_tut_4">系统会弹风险提示：勾选「我已知晓…」再点「确定」（小米系统要等倒计时走完）。</string>
@@ -52,7 +66,7 @@
     <string name="wiz_need_a11y">还没开启无障碍，不能继续</string>
 
     <!--
-      点「去开启」时弹的 toast。按钮一点就跳到系统设置页，本App 的教程卡留在后面看不见，
+      点「去系统设置里开启」时弹的 toast。按钮一点就跳到系统设置页，本App 的教程卡留在后面看不见，
       所以这条只讲三件事：往下拉 → 列表叫什么 → 找哪一项。
       ⚠️ 必须**先 show toast 再 startActivity**（见 WizardScreen 的 WizardHost）：跳走以后本App
       立刻退到后台，Android 11+ 会直接丢掉后台 App 的 toast。
@@ -70,6 +84,10 @@
       ④开发者模式怎么开各品牌不一样，所以附了一张可以点开放大的路径图 + 一个视频教程。
       ⭐ 「由谁写」的措辞不许含糊：读设置、算该写什么、发起调用都是本App 做的，Shizuku 只出借
       shell 身份跑那条 `settings put` 命令 —— 别写成「写这件事全交给 Shizuku」。
+      ⭐ 页头**只留标题**：那句"这是干什么的"（`shzg_lead`）当普通正文摆在标题下面 ——
+      页头副标题只有一行、字号又小，长句挤在那里看不清。
+      ⭐ 状态胶囊要说清"**什么**可以用 / 什么时候不用再点"：就绪 =「可以用 Shizuku 开启无障碍：点下面的按钮」；
+      无障碍已开 + 自动维持已开 =「无障碍已开启，并会自动维持」，此时那只按钮**置灰**。
       ⭐ 状态卡里**只有一只动作按钮**，而且**文案固定不变**（`shz_btn_one`）——
       当前缺哪一步不看按钮名字，只看上面的状态胶囊（`shz_state_*` 说的是"下一步做什么"）；
       真的走不下去时，**按下按钮之后才弹窗**说清是哪一种
@@ -81,15 +99,18 @@
     -->
     <string name="shz_entry_btn">通过Shizuku开启无障碍（推荐）</string>
     <string name="shzg_title">通过 Shizuku 开启无障碍</string>
-    <string name="shzg_lead">系统有时会自己关掉无障碍。开了这个，本App 每次打开都会替你打开回来。</string>
+    <string name="shzg_lead">系统有时会自己关掉无障碍。用 Shizuku 开通一次后，本App 每次打开都会替你把它打开回来。</string>
     <string name="shzg_no_shizuku">不装 Shizuku 也行：无障碍被关掉后，去「设置 → 无障碍 / 辅助功能」里手动打开「开锁」。</string>
-    <string name="shz_state_ready">可以用，点下面这个按钮</string>
-    <string name="shz_state_ready_no_shizuku">可以用：Shizuku 不在跑也行</string>
+    <string name="shz_state_ready">可以用 Shizuku 开启无障碍：点下面的按钮</string>
+    <string name="shz_state_ready_no_shizuku">可以用：本App 已能自己打开无障碍，不用 Shizuku 在跑</string>
+    <string name="shz_state_done">无障碍已开启，并会自动维持</string>
     <string name="shz_state_not_running">Shizuku 没在运行：点下面的按钮</string>
     <string name="shz_state_no_permission">点下面按钮，然后允许「开锁」</string>
-    <!-- 这一页唯一那只按钮：**文案固定**，不许按状态改名（当前缺哪一步由状态胶囊说，按下之后才弹窗）。 -->
+    <!-- 这一页唯一那只按钮：**文案固定**，不许按状态改名（当前缺哪一步由状态胶囊说，按下之后才弹窗）；
+         无障碍已开 + 自动维持已开时置灰（没有可做的事了，见 ui/ShizukuGuideScreen.kt 的 `done`）。 -->
     <string name="shz_btn_one">使用Shizuku开启无障碍</string>
     <string name="shz_keep_desc">点一下就会开启；以后被系统关掉，本App 自己打开回来。</string>
+    <string name="shz_keep_desc_done">被系统关掉后会自动打开回来，这里不用再操作。</string>
     <string name="shz_done">已开启：以后会自动打开无障碍</string>
     <string name="shz_failed">没能成功，请去系统设置的无障碍 / 辅助功能里手动打开「开锁」</string>
     <string name="shz_download_failed">打不开浏览器 · 下载地址：github.com/thedjchi/Shizuku/releases</string>
@@ -103,10 +124,10 @@
     <string name="dlg_shz_off_later">稍后</string>
 
     <!-- 设置面板第二只胶囊（只在用户按过引导页那只按钮之后出现）：它**只回答一个问题**
-         ——「无障碍万一被关掉，会不会自动打开」，当前无障碍开着没有由上面那只胶囊说，这里不重复。
+         ——「无障碍自动维持开了没有」，当前无障碍开着没有由上面那只胶囊说，这里不重复。
          所以"不 ok"只有一个条件：两条写回路径都不通（Shizuku 没就绪，也没拿到那条写回权限）。 -->
-    <string name="set_auto_keep_on">无障碍被关掉时会自动打开</string>
-    <string name="set_auto_keep_not_running">自动打开暂时用不了（Shizuku 没就绪）</string>
+    <string name="set_auto_keep_on">无障碍自动维持已开启</string>
+    <string name="set_auto_keep_not_running">自动维持暂时用不了（Shizuku 没就绪）</string>
     <string name="set_auto_keep_armed">无障碍现在是关着的：下次打开本App 会自动打开。</string>
     <string name="set_auto_keep_no_path">点下面那个「通过Shizuku开启无障碍（推荐）」，把 Shizuku 处理好就能自动打开了。</string>
 

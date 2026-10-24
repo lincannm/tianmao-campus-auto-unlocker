@@ -446,6 +446,21 @@ fun StepTitle(text: String) {
 }
 
 /**
+ * 卡内的小节标题（16sp SemiBold）：一张卡里并列两种做法 / 两个选项时，用它把段落分开，
+ * 让"选一个走"这件事看得见。比 [StepTitle] 小一级，不与整步的标题抢。
+ */
+@Composable
+fun OptionTitle(text: String) {
+    Text(
+        text = text,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurface
+    )
+}
+
+/**
  * MD3 bodyLarge。文案里自己带 \n，一行一个意思，避免一大段要读。
  *
  * @param color 默认是页面底上的字色；卡底不是 `surface` 时（如 [TintedCard]）要显式传。

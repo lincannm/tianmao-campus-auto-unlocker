@@ -47,10 +47,10 @@ import com.fucktmall.unlockassistant.Session
  * 它讲的是"照教程做却被拦住"这种情况，所以与正常步骤分开、单独一张不同色的卡，
  * 并且**默认折叠**（点标题展开）—— 碰到那个弹窗的人是少数，摊开会把「怎么开启」挤出首屏。
  *
- * 第 1 步「去开启」按钮**下面**还有一个按钮「通过Shizuku开启无障碍（推荐）」（`R.string.shz_entry_btn`）：
- * 点了跳到独立的 [com.fucktmall.unlockassistant.ShizukuGuideActivity]。要用那条路的人得先装 Shizuku、
- * 开「开发者模式」、启动它的服务 —— 这些步骤摊在向导里会把「怎么开启」挤出首屏，所以这里只留一个入口，
- * 说明书全在那一页（设置面板里是同一个按钮，见 [SettingsScreen]）。
+ * 第 1 步卡里**并列两条路、选一条走**：方式一 = 用 Shizuku 开启（推荐，点了进独立的
+ * [com.fucktmall.unlockassistant.ShizukuGuideActivity]），方式二 = 普通方法（去系统设置里手动打开）。
+ * Shizuku 那条得先装 Shizuku、开「开发者模式」、启动它的服务 —— 这些步骤摊在向导里会把两条路都挤出首屏，
+ * 所以这里只留入口，说明书全在那一页（设置面板里是同一个入口，见 [SettingsScreen]）。
  */
 @Composable
 fun WizardScreen(
@@ -190,7 +190,7 @@ fun WizardHost(
     WizardScreen(
         a11yOn = a11yOn,
         onOpenA11y = {
-            // ⭐ 点「去开启」先弹一句 toast（文案 `wiz_s1_toast`）：按钮一点人就跳到系统设置页，
+            // ⭐ 点方式二那个按钮先弹一句 toast（文案 `wiz_s1_toast`）：按钮一点人就跳到系统设置页，
             // 本App 的教程卡留在后面看不见，而那一页最容易卡住人的是「服务列表在页面最底下」。
             // ⚠️ **必须先 show 再 startActivity**：跳走后本App 立刻退到后台，
             // Android 11+ 对后台 App 的 toast 是**直接丢弃**（不是排队），顺序反了就白写。
@@ -209,12 +209,13 @@ fun WizardHost(
 /**
  * 第 1 步：开启无障碍。
  *
- * 卡里只放「是什么 / 现在什么状态 / 两个按钮」，**具体怎么点放卡外的 [StepsCard]** ——
- * 点完按钮就跳去系统设置了，教程卡留在屏幕上（回来时还在），卡里塞满步骤反而没人读。
+ * 卡里只放「是什么 / 现在什么状态 / 两条路各一个入口」，**具体怎么点放卡外的教程卡** ——
+ * 点完按钮就跳去系统设置（或 Shizuku 引导页）了，教程卡留在屏幕上（回来时还在），
+ * 卡里塞满步骤反而没人读。
  *
- * 两个按钮是**两条并列的路**：上面那个去系统设置里手动开（默认路径，谁都能走），
- * 下面那个进 Shizuku 引导页（可选增强，装了 Shizuku 就不用去系统设置里翻，
- * 连侧载 App 会遇到的「受限设置」拦截都绕过去了）。
+ * ⭐ **两条并列的路，选一条走**（两个部分并列、Shizuku 那条标推荐）：
+ * 方式一 = Shizuku（一次设置好，被系统关掉能自己恢复），方式二 = 普通方法（去系统设置里手动打开）。
+ * 两条都只是入口，不分先后；方式二做完以后系统关掉还得自己回来开，这一点写在它的说明里。
  */
 @Composable
 private fun StepA11y(
@@ -231,21 +232,37 @@ private fun StepA11y(
         okText = stringResource(R.string.wiz_s1_on),
         badText = stringResource(R.string.wiz_s1_off)
     )
-    Spacer(Modifier.height(16.dp))
-    // 已经开了就禁用：这一步做完了，不需要（也不应该）再去点一次。
+
+    // 方式一（推荐）：进独立的 Shizuku 引导页。无障碍已经开着时**仍然放行** ——
+    // 这一页要做的不只是"打开一次"，还有"以后被关掉自动打开"，后者可能还没开。
+    Spacer(Modifier.height(20.dp))
+    OptionTitle(stringResource(R.string.wiz_s1_part1_title))
+    Spacer(Modifier.height(6.dp))
+    BodyText(stringResource(R.string.wiz_s1_part1_body))
+    Spacer(Modifier.height(12.dp))
     PrimaryButton(
+        text = stringResource(R.string.wiz_s1_part1_btn),
+        onClick = onOpenShizukuGuide
+    )
+    Spacer(Modifier.height(6.dp))
+    HintText(stringResource(R.string.wiz_s1_part1_hint))
+
+    // 方式二（普通方法）：跳系统设置页。已经开着就禁用 —— 这一步做完了，不需要再去点一次。
+    Spacer(Modifier.height(22.dp))
+    OptionTitle(stringResource(R.string.wiz_s1_part2_title))
+    Spacer(Modifier.height(6.dp))
+    BodyText(stringResource(R.string.wiz_s1_part2_body))
+    Spacer(Modifier.height(12.dp))
+    OutlinedActionButton(
         text = stringResource(R.string.wiz_s1_btn),
+        modifier = Modifier.fillMaxWidth(),
         enabled = !a11yOn,
         onClick = onOpenA11y
     )
-    // ⭐ 「去开启」**下面**的第二个入口：装了 Shizuku 的人走这条路更省事（也绕过了受限设置拦截）。
-    // 无障碍已经开好时不禁用 —— 这时候进来的人多半是想把「保持开启」那个开关也打开。
-    Spacer(Modifier.height(10.dp))
-    OutlinedActionButton(
-        text = stringResource(R.string.shz_entry_btn),
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onOpenShizukuGuide
-    )
+    if (a11yOn) {
+        Spacer(Modifier.height(6.dp))
+        HintText(stringResource(R.string.wiz_s1_part2_done))
+    }
 }
 
 @Composable
